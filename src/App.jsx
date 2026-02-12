@@ -1,15 +1,22 @@
-import { useEffect, useState } from "react";
+import FullCalendar from "@fullcalendar/react";
+import dayGridPlugin from "@fullcalendar/daygrid";
 
 function App() {
-  const [msg, setMsg] = useState("");
-
-  useEffect(() => {
-    fetch("/api/hello")
-      .then(res => res.text())
-      .then(data => setMsg(data));
-  }, []);
-
-  return <h1>{msg}</h1>;
+  
+  return (
+    <div style={{ height: "100vh", display: "flex", flexDirection: "column" }}>
+      
+      {/* カレンダー領域 */}
+      <div style={{ flex: 1, minHeight: 0, padding: 16 }}>
+        <FullCalendar
+          plugins={[dayGridPlugin]}
+          initialView="dayGridMonth"
+          height="100%"
+          expandRows={true}
+        />
+      </div>
+    </div>
+  );
 }
 
 export default App;
