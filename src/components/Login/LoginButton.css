@@ -1,0 +1,12 @@
+.login-button {
+  background-color: #007bff;  /* 青 */
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.login-button:hover {
+  background-color: #0056b3;  /* 濃い青 */
+}
