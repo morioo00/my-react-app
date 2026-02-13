@@ -1,6 +1,8 @@
-import AuthLayout from "./AuthLayout";
-import AuthCard from "./AuthCard";
-import AuthTitle from "./AuthTitle";
+
+import AuthLayout from "../../components/Login/AuthLayout";
+import AuthCard from "../../components/Login/AuthCard";
+import AuthTitle from "../../components/Login/AuthTitle";
+
 
 export default function LoginPage() {
   return (
