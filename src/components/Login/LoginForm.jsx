@@ -1,8 +1,9 @@
 import { useState } from "react";
-import UsernameInput from "../components/Login/UsernameInput";
-import PasswordInput from "../components/Login/PasswordInput";
-import LoginButton from "../components/Login/LoginButton";
-import NewAccountButton from "../components/Login/NewAccountButton";
+import UsernameInput from "./UsernameInput";
+import PasswordInput from "./PasswordInput";
+import LoginButton from "./LoginButton";
+import NewAccountButton from "./NewAccountButton";
+
 
 function LoginPage() {
   const [username, setUsername] = useState("");
