@@ -1,0 +1,11 @@
+.app-container {
+ height: 100vh;
+ display: flex;
+ flex-direction: column;
+}
+
+.calender-area {
+ flex: 1;
+ min-height: 0;
+ padding: 16px;
+}
