@@ -1,8 +1,8 @@
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
-import "./App.css";
+import "./Calendar.css";
 
-function App() {
+export default function CalendarPage() {
   
   return (
     <div className="app-container">
@@ -20,4 +20,3 @@ function App() {
   );
 }
 
-export default App;
