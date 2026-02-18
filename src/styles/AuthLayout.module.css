@@ -1,0 +1,10 @@
+
+.layout {
+  position: fixed;
+  inset: 0;              /* top/right/bottom/left = 0 で画面全体 */
+  display: flex;
+  align-items: center;   /* 縦中央 */
+  justify-content: center; /* 横中央 */
+  background: #f3f4f6;  /* 明るいグレー */;
+  padding: 24px;         /* 画面が狭い時の余白 */
+}
