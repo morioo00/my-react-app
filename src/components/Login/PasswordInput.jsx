@@ -1,28 +1,27 @@
 import { useState } from "react";
-import styles from "../../styles/Login/Input.module.css";
+import styles from "./styles/Input.module.css";
 
-function PasswordInput({ password, setPassword }) {
-  const [showPassword, setShowPassword] = useState(false);
+
+export default function PasswordInput({ password, setPassword }) {
+  const [show, setShow] = useState(false);
 
   return (
-    <div className={styles.wrapper}>
+    <div className={styles.passwordWrapper}>
       <input
-        type={showPassword ? "text" : "password"}
+        type={show ? "text" : "password"}
         value={password}
         onChange={(e) => setPassword(e.target.value)}
+        className={styles.input}
         placeholder="パスワード"
-        className={`${styles.input} ${styles.passwordInput}`}
       />
 
       <button
         type="button"
-        onClick={() => setShowPassword(prev => !prev)}
-        className={styles.toggle}
+        className={styles.eyeButton}
+        onClick={() => setShow(!show)}
       >
         👁
       </button>
     </div>
   );
 }
-
-export default PasswordInput;

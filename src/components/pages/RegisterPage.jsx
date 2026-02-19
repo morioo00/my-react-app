@@ -1,6 +1,6 @@
-import AuthLayout from "../../components/Login/AuthLayout";
-import AuthCard from "../../components/Login/AuthCard";
-import AuthTitle from "../../components/Login/AuthTitle";
+import AuthLayout from "../Login/AuthLayout";
+import AuthCard from "../Login/AuthCard";
+import AuthTitle from "../Login/AuthTitle";
 
 export default function RegisterPage() {
   return (
