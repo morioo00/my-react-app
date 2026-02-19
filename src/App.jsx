@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from "react-router-dom";
-import LoginPage from "./pages/auth/LoginPage";
 import CalendarPage from "./components/calendar/Calendar";
+import LoginPage from "./components/pages/LoginPage";
+
 
 export default function App() {
   return (

@@ -1,4 +1,4 @@
-import "./LoginButton.css";
+import "./styles/LoginButton.css";
 
 
 function LoginButton({ onClick }) {

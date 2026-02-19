@@ -1,4 +1,4 @@
-import styles from "../../styles/Login/Input.module.css";
+import styles from "./styles/Input.module.css";
 
 function UsernameInput({ username, setUsername }) {
   return (
