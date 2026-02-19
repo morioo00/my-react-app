@@ -1,4 +1,4 @@
-import styles from "../../styles/AuthCard.module.css";
+import styles from "./styles/AuthCard.module.css";
 
 export default function AuthCard({ children }) {
   return (
