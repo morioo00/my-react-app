@@ -1,5 +1,6 @@
 
-import styles from "../../styles/AuthLayout.module.css";
+import styles from "./styles/AuthLayout.module.css";
+
 
 export default function AuthLayout({ children }) {
   return (
