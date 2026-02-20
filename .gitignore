@@ -26,3 +26,5 @@ dist-ssr
 # H2 database
 *.mv.db
 backend/data/
+
+# 試し
