@@ -1,5 +1,7 @@
 import { Routes, Route, Navigate } from "react-router-dom";
+import CalendarPage from "./components/calendar/Calendar";
 import LoginPage from "./components/pages/LoginPage";
+
 
 export default function App() {
   return (
@@ -8,6 +10,8 @@ export default function App() {
       <Route path="/" element={<Navigate to="/login" replace />} />
 
       <Route path="/login" element={<LoginPage />} />
+
+      <Route path="/calendar" element={<CalendarPage />} />
 
       {/* 404用 */}
       <Route path="*" element={<div>404 Not Found</div>} />
