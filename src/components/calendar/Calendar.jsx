@@ -1,13 +1,10 @@
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
-import "./App.css";
+import "./Calendar.css";
 
-function App() {
-  
+export default function Calendar() {
   return (
     <div className="app-container">
-      
-      {/* カレンダー領域 */}
       <div className="calendar-area">
         <FullCalendar
           plugins={[dayGridPlugin]}
@@ -19,5 +16,3 @@ function App() {
     </div>
   );
 }
-
-export default App;
