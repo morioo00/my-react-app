@@ -38,8 +38,8 @@ export default function NewAccountForm() {
         return;
       }
 
-      setMessage("登録完了！ログイン画面へ移動します。");
-      setTimeout(() => navigate("/login"), 1000);
+      setMessage("登録完了！3秒後にログイン画面へ移動します。");
+      setTimeout(() => navigate("/login"), 3000);
     } catch (e) {
       // ✅ 失敗理由を特定するためログ出し（重要）
       console.log("register fetch error:", e);
