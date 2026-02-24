@@ -1,4 +1,5 @@
-import styles from "../../styles/AuthTitle.module.css";
+import styles from "./styles/AuthTitle.module.css";
+
 
 export default function AuthTitle({
   title = "My App",

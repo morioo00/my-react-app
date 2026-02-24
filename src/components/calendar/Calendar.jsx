@@ -74,7 +74,7 @@ export default function CalendarPage() {
     alert("終了時間は開始時間より後にしてください");
     return;
   }
-
+}
   setEvents((prev) => [
     ...prev,
     {
@@ -93,10 +93,9 @@ export default function CalendarPage() {
       },
     },
   ]);
-  return (
+export default function Calendar() {
+   return (
     <div className="app-container">
-      
-      {/* カレンダー領域 */}
       <div className="calendar-area">
         <FullCalendar
           plugins={[dayGridPlugin]}
@@ -108,4 +107,3 @@ export default function CalendarPage() {
     </div>
   );
 }
-

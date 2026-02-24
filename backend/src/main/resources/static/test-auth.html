@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Auth API Test</title>
+  </head>
+  <body>
+    <h1>Auth API Test</h1>
+
+    <h2>Register</h2>
+    <div>
+      <input id="ru" placeholder="username (alphanumeric)" />
+      <input id="rp" placeholder="password" type="password" />
+      <button id="rbtn">Register</button>
+    </div>
+    <pre id="rout"></pre>
+
+    <h2>Login</h2>
+    <div>
+      <input id="lu" placeholder="username" />
+      <input id="lp" placeholder="password" type="password" />
+      <button id="lbtn">Login</button>
+    </div>
+    <pre id="lout"></pre>
+
+    <script>
+      const post = async (url, body) => {
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        const text = await res.text(); // いまは文字列レスポンス混在なので text で受ける
+        return { status: res.status, text };
+      };
+
+      document.getElementById("rbtn").onclick = async () => {
+        const username = document.getElementById("ru").value;
+        const password = document.getElementById("rp").value;
+        const out = document.getElementById("rout");
+        out.textContent = "sending...";
+        const r = await post("/api/auth/register", { username, password });
+        out.textContent = `status: ${r.status}\n${r.text}`;
+      };
+
+      document.getElementById("lbtn").onclick = async () => {
+        const username = document.getElementById("lu").value;
+        const password = document.getElementById("lp").value;
+        const out = document.getElementById("lout");
+        out.textContent = "sending...";
+        const r = await post("/api/auth/login", { username, password });
+        out.textContent = `status: ${r.status}\n${r.text}`;
+      };
+    </script>
+  </body>
+</html>

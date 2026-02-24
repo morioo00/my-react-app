@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# H2 database
+*.mv.db
+backend/data/
+
+# 試し
