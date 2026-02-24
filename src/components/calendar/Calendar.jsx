@@ -52,7 +52,7 @@ export default function CalendarPage() {
   };
 
   const handleDateClick = (info) => {
-    // FullCalendarは dateStr（小文字S）
+    // FullCalendarは dateStr
     openModalForDate(info.dateStr);
   };
 
@@ -103,3 +103,8 @@ export default function CalendarPage() {
     </div>
   );
 }
+  {open && (
+        <div className="modal-overlay" onClick={() => setOpen(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h2 className="modal-title">投稿</h2> 
+      )}
