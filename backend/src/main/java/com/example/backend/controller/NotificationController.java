@@ -1,4 +1,4 @@
-package com.example.calendar.controller;
+package com.example.backend.controller;
 
 public class NotificationController {
 }
