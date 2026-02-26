@@ -2,13 +2,16 @@ import FullCalendar from "@fullcalendar/react"
 import dayGridPlugin from "@fullcalendar/daygrid"
 import interactionPlugin from "@fullcalendar/interaction"
 
-function CalendarView({ onDateClick }) {
+function CalendarView() {
   return (
     <FullCalendar
       plugins={[dayGridPlugin, interactionPlugin]}
       initialView="dayGridMonth"
-      dateClick={onDateClick}
+      dateClick={(info) => {
+        console.log("クリック成功:", info.dateStr)
+      }}
     />
+    
   )
 }
 
