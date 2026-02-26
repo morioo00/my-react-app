@@ -100,11 +100,69 @@ export default function CalendarPage() {
           events={events}
         />
       </div>
-    </div>
-  );
-}
-  {open && (
+      {open && (
         <div className="modal-overlay" onClick={() => setOpen(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <h2 className="modal-title">投稿</h2> 
+    
+           <div className="modal-field">
+            <div className="modal-label">日付</div>
+            <div className="modal-value">{selectedDate}</div>
+            </div>
+
+           <div className="modal-field">
+             <div className="modal-label">タイトル</div>
+            <input
+             className="input"
+             value={title}
+             onChange={(e) => setTitle(e.target.value)}
+             />
+             </div> 
+
+           <div className="modal-field">
+            <div className="modal-label">内容のメモ</div>
+            <textarea
+             className="textarea"
+             rows={2}
+             value={memo}
+             onChange={(e) => (e.target.value)}
+             />
+            </div>
+
+            <div className="modal-field">
+             <div className="modal-label">時間</div>
+             <input
+              className="input"
+              type="time"
+              step={300}
+              value={startTime}
+              onChange={(e) => setStartTime(e.target.value)}
+             /> 
+             <span className="dash">～</span>
+             <input 
+              className="input"
+              type="time"
+              step={300}
+              min={startTime}
+              value={endTime}
+              onChange={(e) => setEndTime(e.target.value)}
+             />
+            </div>
+
+            <div className="modal-field">
+              <div className="modal-label">通知</div>
+              <select
+               className="select"
+               value={reminder}
+               onChange={(e) => setReminder(e.target.value)}
+               >
+                {reminder
+
+                }
+            </div>
+
       )}
+  </div>
+  );
+}
+  
