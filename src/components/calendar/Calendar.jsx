@@ -3,7 +3,7 @@ import FullCalendar from "@fullcalendar/react";
 import interactionPlugin from "@fullcalendar/interaction";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import "./Calendar.css";
-import CalendarSearchHeader from "../CalendarSearchHeader/CalendarSearchHeader";
+import SearchHeader from "../SearchHeader/SearchHeader";
 
 function toDate(dateStr, timeStr) {
   const t = timeStr?.trim() ? timeStr.trim() : "00:00";
@@ -112,7 +112,7 @@ export default function CalendarPage() {
   return (
   <div className="app-container">
     <div className="calendar-area">
-      <CalendarSearchHeader
+      <SearchHeader
         title={viewTitle || "Calendar"}
         searchText={searchText}
         onChangeSearchText={setSearchText}

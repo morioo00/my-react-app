@@ -1,6 +1,6 @@
-import "./CalendarSearchHeader.css";
+import "./SearchHeader.css";
 
-export default function CalendarSearchHeader({
+export default function SearchHeader({
   title = "Calendar",
   searchText,
   onChangeSearchText,
@@ -12,7 +12,7 @@ export default function CalendarSearchHeader({
 }) {
   return (
     <div className="calHeader">
-      <div className="calTitle">{title}</div>
+      <div className="searchHeaderTitle">{title}</div>
 
       {/* PC用検索 */}
       <div className="calSearch">
