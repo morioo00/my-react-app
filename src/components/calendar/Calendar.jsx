@@ -1,8 +1,9 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import FullCalendar from "@fullcalendar/react";
 import interactionPlugin from "@fullcalendar/interaction";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import "./Calendar.css";
+import SearchHeader from "../SearchHeader/SearchHeader";
 
 function toDate(dateStr, timeStr) {
   const t = timeStr?.trim() ? timeStr.trim() : "00:00";
@@ -10,6 +11,14 @@ function toDate(dateStr, timeStr) {
 }
 
 export default function CalendarPage() {
+  const calendarRef = useRef(null);
+
+  const [viewTitle, setViewTitle] = useState(""); // 例: February 2026
+  const calApi = () => calendarRef.current?.getApi();
+  const goToday = () => calApi()?.today();
+  const goPrev = () => calApi()?.prev();
+  const goNext = () => calApi()?.next();
+
   const [open, setOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState("");
 
@@ -36,6 +45,19 @@ export default function CalendarPage() {
 
   const [events, setEvents] = useState([]);
 
+
+  const [q, setQ] = useState("");
+  const [searchText, setSearchText] = useState("");
+
+  const commitSearch = () => setQ(searchText.trim());
+  const clearSearch = () => {
+  setSearchText("");
+  setQ("");
+};
+
+  // 📱 スマホで検索欄を開閉
+  const [searchOpen, setSearchOpen] = useState(false);
+
   const openModalForDate = (dateStr) => {
     setSelectedDate(dateStr);
 
@@ -52,7 +74,6 @@ export default function CalendarPage() {
   };
 
   const handleDateClick = (info) => {
-    // FullCalendarは dateStr（小文字S）
     openModalForDate(info.dateStr);
   };
 
@@ -89,17 +110,45 @@ export default function CalendarPage() {
   };
 
   return (
-    <div className="app-container">
-      <div className="calendar-area">
-        <FullCalendar
-          plugins={[dayGridPlugin, interactionPlugin]}
-          initialView="dayGridMonth"
-          height="100%"
-          expandRows={true}
-          dateClick={handleDateClick}
-          events={events}
-        />
-      </div>
+  <div className="app-container">
+    <div className="calendar-area">
+      <SearchHeader
+        title={viewTitle || "Calendar"}
+        searchText={searchText}
+        onChangeSearchText={setSearchText}
+        onCommitSearch={commitSearch}
+        onClearSearch={clearSearch}
+        searchOpen={searchOpen}
+        onToggleSearchOpen={() => setSearchOpen((v) => !v)}
+        rightControls={
+          <>
+            <button className="calBtn" type="button" onClick={goToday}>
+              today
+            </button>
+            <button className="calBtn" type="button" onClick={goPrev}>
+              ‹
+            </button>
+            <button className="calBtn" type="button" onClick={goNext}>
+              ›
+            </button>
+          </>
+        }
+      />
+
+      <FullCalendar
+        ref={calendarRef}
+        plugins={[dayGridPlugin, interactionPlugin]}
+        initialView="dayGridMonth"
+        height="100%"
+        expandRows={true}
+        headerToolbar={false}
+        datesSet={(arg) => setViewTitle(arg.view.title)}
+        dateClick={handleDateClick}
+        events={events}
+      />
+
+      {/* modal JSX がここに続く */}
     </div>
-  );
+  </div>
+);
 }
