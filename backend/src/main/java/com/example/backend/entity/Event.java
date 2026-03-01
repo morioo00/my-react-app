@@ -1,5 +1,6 @@
 package com.example.backend.entity;
 
+import com.example.backend.entity.User;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
@@ -22,6 +23,10 @@ public class Event {
 
     @Column(nullable = false)
     private LocalDateTime endAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "author_id")
+    private User author;
 
     // getter/setter（まずは手書きでOK）
     public Long getId() {
@@ -58,5 +63,13 @@ public class Event {
 
     public void setEndAt(LocalDateTime endAt) {
         this.endAt = endAt;
+    }
+
+    public User getAuthor() {
+        return author;
+    }
+
+    public void setAuthor(User author) {
+        this.author = author;
     }
 }
