@@ -209,8 +209,8 @@ export default function Calendar() {
 
         {/* ===== モーダル（動作が確実な版：TNao側） ===== */}
         {open && (
-          <div className="modal-overlay">
-            <div className="modal-box">
+          <div className="modal-overlay" onClick={() => setOpen(false)}>
+            <div className="modal-box" onClick={(e) => e.stopPropagation()}>
               <h3>{editingEventId ? "予定編集" : `${selectedDate} の予定追加`}</h3>
 
               {/* 作成者 */}
