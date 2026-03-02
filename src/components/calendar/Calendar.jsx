@@ -92,6 +92,7 @@ export default function Calendar() {
   };
 
   const handleDateClick = (info) => {
+    // FullCalendarは dateStr
     openModalForDate(info.dateStr);
   };
 
@@ -206,7 +207,7 @@ export default function Calendar() {
           }
         />
 
-        {/* ===== モーダル ===== */}
+        {/* ===== モーダル（動作が確実な版：TNao側） ===== */}
         {open && (
           <div className="modal-overlay">
             <div className="modal-box">
@@ -345,6 +346,16 @@ export default function Calendar() {
             );
           }}
         />
+
+        {/*
+          ===== nasu側のモーダル案（現状は未完成のままコンフリクトに混ざっていたので、壊さず“残す”）=====
+          - overlayクリックで閉じる（onClick={() => setOpen(false)}）の発想は良い
+          - ただし当時のコードは以下が未完成だった：
+            - textarea の onChange が setMemo していない
+            - reminder の select options が未実装
+            - JSX の閉じタグ/括弧が崩れていてビルドが通らない
+          - もしこのデザインに切り替えるなら、次のステップで「このブロックを完成させて置換」がおすすめ
+        */}
       </div>
     </div>
   );
