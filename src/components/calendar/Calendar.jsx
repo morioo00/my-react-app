@@ -10,7 +10,7 @@ function toDate(dateStr, timeStr) {
   return new Date(`${dateStr}T${t}:00`);
 }
 
-export default function CalendarPage() {
+export default function Calendar() {
   const calendarRef = useRef(null);
 
   const [viewTitle, setViewTitle] = useState(""); // 例: February 2026
@@ -21,7 +21,9 @@ export default function CalendarPage() {
 
   const [open, setOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState("");
+  const [editingEventId, setEditingEventId] = useState(null);
 
+  const [creator, setCreator] = useState("");
   const [title, setTitle] = useState("");
   const [memo, setMemo] = useState("");
   const [startTime, setStartTime] = useState("09:00");
@@ -45,22 +47,38 @@ export default function CalendarPage() {
 
   const [events, setEvents] = useState([]);
 
-
+  // ===== 検索（あなた側を追加：相手の構造は壊さない）=====
   const [q, setQ] = useState("");
   const [searchText, setSearchText] = useState("");
 
   const commitSearch = () => setQ(searchText.trim());
   const clearSearch = () => {
-  setSearchText("");
-  setQ("");
-};
+    setSearchText("");
+    setQ("");
+  };
 
   // 📱 スマホで検索欄を開閉
   const [searchOpen, setSearchOpen] = useState(false);
 
+  // 検索反映：title / memo / creator を対象に絞り込み
+  const filteredEvents = useMemo(() => {
+    const keyword = q.trim().toLowerCase();
+    if (!keyword) return events;
+
+    return events.filter((e) => {
+      const t = (e.title ?? "").toLowerCase();
+      const m = (e.extendedProps?.memo ?? "").toLowerCase();
+      const c = (e.extendedProps?.creator ?? "").toLowerCase();
+      return t.includes(keyword) || m.includes(keyword) || c.includes(keyword);
+    });
+  }, [events, q]);
+
+  // ===== 新規作成 =====
   const openModalForDate = (dateStr) => {
+    setEditingEventId(null);
     setSelectedDate(dateStr);
 
+    setCreator("");
     setTitle("");
     setMemo("");
     setStartTime("09:00");
@@ -77,6 +95,30 @@ export default function CalendarPage() {
     openModalForDate(info.dateStr);
   };
 
+  // ===== 編集 =====
+  const handleEventClick = (clickInfo) => {
+    const event = clickInfo.event;
+
+    setEditingEventId(event.id);
+    setSelectedDate(event.startStr.slice(0, 10));
+    setCreator(event.extendedProps.creator || "");
+    setTitle(event.title);
+    setMemo(event.extendedProps.memo || "");
+    setStartTime(event.startStr.slice(11, 16));
+    setEndTime(event.endStr?.slice(11, 16) || "10:00");
+    setReminder(event.extendedProps.reminder || "none");
+    setIsSurvey(event.extendedProps.isSurvey || false);
+
+    if (event.extendedProps.deadline) {
+      const d = new Date(event.extendedProps.deadline);
+      setDeadlineDate(d.toISOString().slice(0, 10));
+      setDeadlineTime(d.toTimeString().slice(0, 5));
+    }
+
+    setOpen(true);
+  };
+
+  // ===== 保存 =====
   const handleSave = () => {
     if (!title.trim()) return;
 
@@ -88,67 +130,222 @@ export default function CalendarPage() {
       return;
     }
 
-    setEvents((prev) => [
-      ...prev,
-      {
-        title: title.trim(),
-        start,
-        end,
-        extendedProps: {
-          memo,
-          reminder,
-          isSurvey,
-          deadline:
-            isSurvey && deadlineDate
-              ? toDate(deadlineDate, deadlineTime).toISOString()
-              : null,
+    if (editingEventId) {
+      // 更新
+      setEvents((prev) =>
+        prev.map((e) =>
+          e.id === editingEventId
+            ? {
+                ...e,
+                title: title.trim(),
+                start,
+                end,
+                extendedProps: {
+                  creator,
+                  memo,
+                  reminder,
+                  isSurvey,
+                  deadline:
+                    isSurvey && deadlineDate
+                      ? toDate(deadlineDate, deadlineTime).toISOString()
+                      : null,
+                },
+              }
+            : e
+        )
+      );
+    } else {
+      // 新規
+      setEvents((prev) => [
+        ...prev,
+        {
+          id: String(Date.now()),
+          title: title.trim(),
+          start,
+          end,
+          extendedProps: {
+            creator,
+            memo,
+            reminder,
+            isSurvey,
+            deadline:
+              isSurvey && deadlineDate
+                ? toDate(deadlineDate, deadlineTime).toISOString()
+                : null,
+          },
         },
-      },
-    ]);
+      ]);
+    }
 
     setOpen(false);
   };
 
   return (
-  <div className="app-container">
-    <div className="calendar-area">
-      <SearchHeader
-        title={viewTitle || "Calendar"}
-        searchText={searchText}
-        onChangeSearchText={setSearchText}
-        onCommitSearch={commitSearch}
-        onClearSearch={clearSearch}
-        searchOpen={searchOpen}
-        onToggleSearchOpen={() => setSearchOpen((v) => !v)}
-        rightControls={
-          <>
-            <button className="calBtn" type="button" onClick={goToday}>
-              today
-            </button>
-            <button className="calBtn" type="button" onClick={goPrev}>
-              ‹
-            </button>
-            <button className="calBtn" type="button" onClick={goNext}>
-              ›
-            </button>
-          </>
-        }
-      />
+    <div className="app-container">
+      <div className="calendar-area">
+        <SearchHeader
+          title={viewTitle || "Calendar"}
+          searchText={searchText}
+          onChangeSearchText={setSearchText}
+          onCommitSearch={commitSearch}
+          onClearSearch={clearSearch}
+          searchOpen={searchOpen}
+          onToggleSearchOpen={() => setSearchOpen((v) => !v)}
+          rightControls={
+            <>
+              <button className="calBtn" type="button" onClick={goToday}>
+                today
+              </button>
+              <button className="calBtn" type="button" onClick={goPrev}>
+                ‹
+              </button>
+              <button className="calBtn" type="button" onClick={goNext}>
+                ›
+              </button>
+            </>
+          }
+        />
 
-      <FullCalendar
-        ref={calendarRef}
-        plugins={[dayGridPlugin, interactionPlugin]}
-        initialView="dayGridMonth"
-        height="100%"
-        expandRows={true}
-        headerToolbar={false}
-        datesSet={(arg) => setViewTitle(arg.view.title)}
-        dateClick={handleDateClick}
-        events={events}
-      />
+        {/* ===== モーダル ===== */}
+        {open && (
+          <div className="modal-overlay">
+            <div className="modal-box">
+              <h3>{editingEventId ? "予定編集" : `${selectedDate} の予定追加`}</h3>
 
-      {/* modal JSX がここに続く */}
+              {/* 作成者 */}
+              <div>
+                <label>作成者</label>
+                <input
+                  type="text"
+                  value={creator}
+                  onChange={(e) => setCreator(e.target.value)}
+                />
+              </div>
+
+              {/* タイトル */}
+              <div>
+                <label>タイトル</label>
+                <input
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                />
+              </div>
+
+              {/* メモ */}
+              <div>
+                <label>内容メモ</label>
+                <textarea
+                  value={memo}
+                  onChange={(e) => setMemo(e.target.value)}
+                  rows="3"
+                />
+              </div>
+
+              {/* 時間 */}
+              <div>
+                <label>開始時間</label>
+                <input
+                  type="time"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label>終了時間</label>
+                <input
+                  type="time"
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
+                />
+              </div>
+
+              {/* 通知 */}
+              <div>
+                <label>通知</label>
+                <select
+                  value={reminder}
+                  onChange={(e) => setReminder(e.target.value)}
+                >
+                  {reminderOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* アンケート */}
+              <div>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={isSurvey}
+                    onChange={(e) => setIsSurvey(e.target.checked)}
+                  />
+                  アンケート
+                </label>
+              </div>
+
+              {isSurvey && (
+                <div>
+                  <label>回答締切</label>
+                  <input
+                    type="date"
+                    value={deadlineDate}
+                    onChange={(e) => setDeadlineDate(e.target.value)}
+                  />
+                  <input
+                    type="time"
+                    value={deadlineTime}
+                    onChange={(e) => setDeadlineTime(e.target.value)}
+                  />
+                </div>
+              )}
+
+              <div style={{ marginTop: "15px" }}>
+                <button onClick={handleSave}>
+                  {editingEventId ? "更新" : "保存"}
+                </button>
+                <button
+                  onClick={() => setOpen(false)}
+                  style={{ marginLeft: "10px" }}
+                >
+                  キャンセル
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ===== カレンダー ===== */}
+        <FullCalendar
+          ref={calendarRef}
+          plugins={[dayGridPlugin, interactionPlugin]}
+          initialView="dayGridMonth"
+          height="100%"
+          expandRows={true}
+          headerToolbar={false}
+          datesSet={(arg) => setViewTitle(arg.view.title)}
+          dateClick={handleDateClick}
+          eventClick={handleEventClick}
+          events={filteredEvents}
+          eventContent={(arg) => {
+            const creator = arg.event.extendedProps.creator;
+            return (
+              <div>
+                {creator && (
+                  <div style={{ fontSize: "10px", fontWeight: "bold" }}>
+                    {creator}
+                  </div>
+                )}
+                <div>{arg.event.title}</div>
+              </div>
+            );
+          }}
+        />
+      </div>
     </div>
-  </div>
-);
+  );
 }
