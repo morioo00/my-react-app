@@ -63,4 +63,22 @@ public class EventController {
                         e.getAuthor() != null ? e.getAuthor().getUsername() : null))
                 .toList();
     }
+
+    // 🔍 イベント検索（title + memo 部分一致、開始日時 新しい順）
+    @GetMapping("/search")
+    public List<CalendarEventDto> search(@RequestParam String q) {
+
+        if (q == null || q.isBlank())
+            return List.of();
+
+        return repo.searchByTitleOrMemo(q.trim())
+                .stream()
+                .map(e -> new CalendarEventDto(
+                        String.valueOf(e.getId()),
+                        e.getTitle(),
+                        e.getStartAt().toString(),
+                        e.getEndAt().toString(),
+                        e.getAuthor() != null ? e.getAuthor().getUsername() : null))
+                .toList();
+    }
 }

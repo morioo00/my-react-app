@@ -5,6 +5,7 @@ import dayGridPlugin from "@fullcalendar/daygrid";
 import "./Calendar.css";
 import CalendarSearchPanel from "./search/CalendarSearchPanel";
 import mockSearcher from "./search/searchers/mockSearcher";
+import apiSearcher from "./search/searchers/apiSearcher";
 
 function toDate(dateStr, timeStr) {
   const t = timeStr?.trim() ? timeStr.trim() : "00:00";
@@ -97,7 +98,7 @@ export default function Calendar() {
   };
 
   // ===== 保存 =====
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!title.trim()) return;
 
     const start = toDate(selectedDate, startTime);
@@ -133,30 +134,60 @@ export default function Calendar() {
         )
       );
     } else {
-      // 新規
-      setEvents((prev) => [
-        ...prev,
-        {
-          id: String(Date.now()),
-          title: title.trim(),
-          start,
-          end,
-          extendedProps: {
-            creator,
-            memo,
-            reminder,
-            isSurvey,
-            deadline:
-              isSurvey && deadlineDate
-                ? toDate(deadlineDate, deadlineTime).toISOString()
-                : null,
-          },
+  // 新規（DBへ保存）
+  const pad = (n) => String(n).padStart(2, "0");
+  const toLocalIso = (d) =>
+    `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
+      d.getHours()
+    )}:${pad(d.getMinutes())}`;
+
+  const payload = {
+    title: title.trim(),
+    memo: memo ?? "",
+    startAt: toLocalIso(start),
+    endAt: toLocalIso(end),
+  };
+
+  try {
+    const res = await fetch("/api/events", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) throw new Error(`POST failed: ${res.status}`);
+
+    const saved = await res.json(); // EventResponseDto想定
+
+    // FullCalendar用にstateへ反映（表示に必要なのは start/end + extendedProps）
+    setEvents((prev) => [
+      ...prev,
+      {
+        id: String(saved.id),
+        title: saved.title,
+        start: saved.startAt,
+        end: saved.endAt,
+        extendedProps: {
+          creator: saved.authorUsername,
+          memo: saved.memo,
+          reminder,
+          isSurvey,
+          deadline:
+            isSurvey && deadlineDate
+              ? toDate(deadlineDate, deadlineTime).toISOString()
+              : null,
         },
-      ]);
-    }
+      },
+    ]);
 
     setOpen(false);
-  };
+    return;
+  } catch (e) {
+    console.error(e);
+    alert("保存に失敗しました");
+    return;
+  }
+}}
 
   return (
     <div className="app-container">
@@ -176,7 +207,7 @@ export default function Calendar() {
               </button>
             </>
           }
-          searcher={mockSearcher}
+          searcher={apiSearcher}
         />
 
         {/* ===== モーダル（動作が確実な版：TNao側） ===== */}

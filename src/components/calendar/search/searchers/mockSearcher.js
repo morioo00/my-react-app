@@ -47,9 +47,15 @@ export default async function mockSearcher(query) {
   const q = (query ?? "").trim().toLowerCase();
   if (!q) return [];
 
-  return mockEvents.filter((e) => {
+  return mockEvents
+  .filter((e) => {
     const t = (e.title ?? "").toLowerCase();
     const m = (e.memo ?? "").toLowerCase();
     return t.includes(q) || m.includes(q);
-  });
+  })
+  .map((e) => ({
+    ...e,
+    startAt: e.start,
+    endAt: e.end,
+  }));
 }

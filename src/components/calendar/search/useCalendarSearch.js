@@ -21,8 +21,9 @@ export default function useCalendarSearch(searcher) {
     try {
       const data = await searcher(q);
 
-      // 開始日時昇順
-      const sorted = [...data].sort((a, b) => new Date(b.start) - new Date(a.start)
+      // 開始日時：新しい順（降順）
+      const sorted = [...data].sort(
+        (a, b) => new Date(b.startAt) - new Date(a.startAt)
       );
 
       setResults(sorted);
@@ -63,7 +64,7 @@ export default function useCalendarSearch(searcher) {
   setSearchText("");
   setError(null);
   setLoading(false);
-}, []);
+  }, []);
 
   return {
     searchText,
@@ -84,6 +85,6 @@ export default function useCalendarSearch(searcher) {
     closeDetailModal,
 
     closeAll,
-    
+
   };
 }

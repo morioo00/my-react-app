@@ -1,5 +1,7 @@
 import { useEffect } from "react";
 import "./SearchResultModal.css";
+import { highlightText } from "./utils/highlight";
+import { buildExcerpt } from "./utils/excerpt";
 
 export default function SearchResultModal({
   open,
@@ -73,15 +75,15 @@ export default function SearchResultModal({
                 onClick={() => onSelect(ev)}
               >
                 <div className="searchResultTitle">
-                  {highlight(ev.title, query)}
+                  {highlightText(ev.title, query)}
                 </div>
 
                 <div className="searchResultDate">
-                  {formatDate(ev.start)} - {formatDate(ev.end)}
+                  {formatDate(ev.startAt)} - {formatDate(ev.endAt)}
                 </div>
 
                 <div className="searchResultMemo">
-                  {truncate(ev.memo, 80)}
+                  {highlightText(buildExcerpt(ev.memo, query, 80), query)}
                 </div>
               </div>
             ))}

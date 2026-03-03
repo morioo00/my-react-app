@@ -48,7 +48,7 @@ export default function EventDetailModal({ open, event, onBack, onCloseAll }) {
           <div className="detailRow">
             <div className="detailLabel">日時</div>
             <div className="detailValue">
-              {formatDateTime(event.start)} - {formatDateTime(event.end)}
+              {formatDateTime(event.startAt)} - {formatDateTime(event.endAt)}
             </div>
           </div>
 
