@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import FullCalendar from "@fullcalendar/react";
 import interactionPlugin from "@fullcalendar/interaction";
 import dayGridPlugin from "@fullcalendar/daygrid";
@@ -20,6 +20,21 @@ export default function Calendar() {
   const goToday = () => calApi()?.today();
   const goPrev = () => calApi()?.prev();
   const goNext = () => calApi()?.next();
+
+  const jumpToDate = (dateLike) => {
+  const d = dateLike instanceof Date ? dateLike : new Date(dateLike);
+
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  const ymd = `${yyyy}-${mm}-${dd}`;
+
+  setHighlightDate(ymd);       // ←ハイライトしたい日を保存
+  calApi()?.gotoDate(d);       // ←月移動（/その日へ移動）
+
+  // 1.2秒後に消す（好みで時間調整OK）
+  setTimeout(() => setHighlightDate(null), 2000);
+};
 
   const [open, setOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState("");
@@ -49,7 +64,60 @@ export default function Calendar() {
 
   const [events, setEvents] = useState([]);
 
+  const [highlightDate, setHighlightDate] = useState(null); // "YYYY-MM-DD"
 
+  const [currentRange, setCurrentRange] = useState(null);
+
+  // ===== DBからイベント取得（初期表示用） =====
+  const pad = (n) => String(n).padStart(2, "0");
+  const toLocalIsoSec = (d) =>
+    `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
+      d.getHours()
+    )}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+
+  const getThisMonthRange = () => {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 1, 0, 0, 0);
+    return { start, end };
+  };
+
+  const fetchEventsRange = async (startDate, endDate) => {
+    const fromISO = toLocalIsoSec(startDate);
+    const toISO = toLocalIsoSec(endDate);
+
+    const res = await fetch(
+      `/api/events?from=${encodeURIComponent(fromISO)}&to=${encodeURIComponent(toISO)}`
+    );
+    if (!res.ok) throw new Error(`GET /api/events failed: ${res.status}`);
+
+    const dtos = await res.json(); // CalendarEventDto[]
+    // FullCalendar形式へ変換
+    const mapped = dtos.map((dto) => ({
+      id: String(dto.id),
+      title: dto.title,
+      start: dto.startAt ?? dto.start, // ←どっちでも動くよう保険
+      end: dto.endAt ?? dto.end,
+      extendedProps: {
+        creator: dto.authorUsername,
+        memo: dto.memo,
+      },
+    }));
+
+    setEvents(mapped);
+  };
+
+    // 月移動・表示範囲変更のたびに：タイトル更新＋その範囲をDBから再取得
+  const handleDatesSet = async (arg) => {
+    setViewTitle(arg.view.title);
+
+    setCurrentRange({
+      start: arg.start,
+      end: arg.end,
+    });
+
+      await fetchEventsRange(arg.start, arg.end);
+      };
 
   // ===== 新規作成 =====
   const openModalForDate = (dateStr) => {
@@ -160,25 +228,9 @@ export default function Calendar() {
     const saved = await res.json(); // EventResponseDto想定
 
     // FullCalendar用にstateへ反映（表示に必要なのは start/end + extendedProps）
-    setEvents((prev) => [
-      ...prev,
-      {
-        id: String(saved.id),
-        title: saved.title,
-        start: saved.startAt,
-        end: saved.endAt,
-        extendedProps: {
-          creator: saved.authorUsername,
-          memo: saved.memo,
-          reminder,
-          isSurvey,
-          deadline:
-            isSurvey && deadlineDate
-              ? toDate(deadlineDate, deadlineTime).toISOString()
-              : null,
-        },
-      },
-    ]);
+    if (currentRange) {
+      await fetchEventsRange(currentRange.start, currentRange.end);
+    };
 
     setOpen(false);
     return;
@@ -188,6 +240,28 @@ export default function Calendar() {
     return;
   }
 }}
+
+  // ===== ハイライト表示用：eventsに背景イベントを混ぜる =====
+  const viewEvents = useMemo(() => {
+    if (!highlightDate) return events;
+
+    const start = `${highlightDate}T00:00:00`;
+
+    const endDate = new Date(`${highlightDate}T00:00:00`);
+    endDate.setDate(endDate.getDate() + 1);
+    const end =
+      `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, "0")}-${String(endDate.getDate()).padStart(2, "0")}T00:00:00`;
+
+    const highlightBg = {
+      id: "__highlight__",
+      start,
+      end,
+      display: "background",
+      backgroundColor: "rgba(255, 230, 0, 0.25)", // 見えるように少し色つけ
+    };
+
+    return [highlightBg, ...events];
+  }, [events, highlightDate]);
 
   return (
     <div className="app-container">
@@ -208,6 +282,7 @@ export default function Calendar() {
             </>
           }
           searcher={apiSearcher}
+          onJumpToDate={jumpToDate}
         />
 
         {/* ===== モーダル（動作が確実な版：TNao側） ===== */}
@@ -331,10 +406,19 @@ export default function Calendar() {
           height="100%"
           expandRows={true}
           headerToolbar={false}
-          datesSet={(arg) => setViewTitle(arg.view.title)}
+          datesSet={handleDatesSet}
           dateClick={handleDateClick}
           eventClick={handleEventClick}
           events={events}
+
+          dayCellClassNames={(arg) => {
+            if (!highlightDate) return [];
+            const y = arg.date.getFullYear();
+            const m = String(arg.date.getMonth() + 1).padStart(2, "0");
+            const d = String(arg.date.getDate()).padStart(2, "0");
+            const ymd = `${y}-${m}-${d}`;
+            return ymd === highlightDate ? ["jump-highlight"] : [];
+          }}
           eventContent={(arg) => {
             const creator = arg.event.extendedProps.creator;
             return (

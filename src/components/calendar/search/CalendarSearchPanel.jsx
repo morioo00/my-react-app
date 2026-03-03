@@ -2,11 +2,13 @@ import SearchHeader from "../../SearchHeader/SearchHeader";
 import SearchResultModal from "./SearchResultModal";
 import EventDetailModal from "./EventDetailModal";
 import useCalendarSearch from "./useCalendarSearch";
+import apiSearcher from "./searchers/apiSearcher";
 
 export default function CalendarSearchPanel({
   title = "Calendar",
   rightControls,
   searcher,
+  onJumpToDate
 }) {
   const search = useCalendarSearch(searcher);
 
@@ -41,8 +43,9 @@ export default function CalendarSearchPanel({
       <EventDetailModal
         open={detailOpen}
         event={search.selectedEvent}
-        onBack={search.closeDetailModal}
+        onClose={search.closeDetailModal}
         onCloseAll={search.closeAll}
+        onJumpToDate={onJumpToDate}
       />
     </>
   );

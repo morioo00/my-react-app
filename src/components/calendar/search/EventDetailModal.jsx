@@ -1,7 +1,13 @@
 import { useEffect } from "react";
 import "./EventDetailModal.css";
 
-export default function EventDetailModal({ open, event, onBack, onCloseAll }) {
+export default function EventDetailModal({
+  open,
+  event,
+  onClose,
+  onCloseAll,
+  onJumpToDate,
+}) {
   // Escで閉じる（×と同じ：完全終了）
   useEffect(() => {
     if (!open) return;
@@ -28,7 +34,7 @@ export default function EventDetailModal({ open, event, onBack, onCloseAll }) {
     <div className="detailModalOverlay" onClick={onCloseAll}>
       <div className="detailModal" onClick={(e) => e.stopPropagation()}>
         <div className="detailModalHeader">
-          <button className="detailBackBtn" type="button" onClick={onBack}>
+          <button className="detailBackBtn" type="button" onClick={onClose}>
             <span className="detailBackIcon">←</span>
             <span>一覧へ</span>
           </button>
@@ -42,6 +48,19 @@ export default function EventDetailModal({ open, event, onBack, onCloseAll }) {
           >
             ✕
           </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              const start = event?.start ?? event?.startAt;
+              if (!start) return;
+              onJumpToDate?.(start);
+              onCloseAll?.(); // 検索モーダルも閉じたいなら
+            }}
+          >
+            カレンダーへ
+          </button>
+
         </div>
 
         <div className="detailModalBody">

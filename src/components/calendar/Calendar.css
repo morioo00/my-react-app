@@ -51,3 +51,8 @@ html, body, #root {
     transform: scale(1);
   }
 }
+
+.jump-highlight {
+  background: rgba(255, 230, 0, 0.22) !important;
+  transition: background 0.2s ease;
+}
