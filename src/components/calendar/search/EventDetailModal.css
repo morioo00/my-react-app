@@ -1,0 +1,146 @@
+.detailModalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+}
+
+.detailModal {
+  width: min(640px, 95%);
+  max-height: 80vh;
+  background: #fff;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.detailModalHeader {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  padding: 16px;
+  border-bottom: 1px solid #eee;
+}
+
+.detailModalClose {
+  border: none;
+  background: transparent;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.detailModalBody {
+  padding: 16px;
+  overflow-y: auto; /* モーダル内スクロール */
+}
+
+.detailRow {
+  margin-bottom: 14px;
+}
+
+.detailLabel {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 6px;
+}
+
+.detailValue {
+  font-size: 14px;
+  color: #222;
+}
+
+.detailMemo {
+  white-space: pre-wrap;
+  line-height: 1.6;
+  font-size: 14px;
+  color: #333;
+}
+
+.detailBackBtn {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 14px;
+  color: #333;
+  margin-right: 8px;
+}
+
+.detailBackBtn:hover {
+  text-decoration: underline;
+}
+
+.detailModalTitle {
+  justify-self: center;
+  text-align: center;
+  font-weight: bold;
+  font-size: 16px;
+
+  /* 長いタイトル対策 */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+/* 右の×を右端に */
+.detailModalClose {
+  justify-self: end;
+}
+.detailBackBtn {
+  min-width: 72px; /* 好みで調整 */
+  text-align: left;
+}
+.detailModalClose {
+  min-width: 72px; /* 好みで調整 */
+  text-align: right;
+}
+
+.detailBackBtn {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 14px;
+  color: #333;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 15px; /* ← ここで隙間調整 */
+}
+
+.detailBackBtn,
+.detailModalClose {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 14px;
+  color: #333;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 6px 10px;
+  border-radius: 8px;
+  transition: background 0.15s ease;
+}
+
+.detailBackBtn {
+  gap: 6px;
+  opacity: 1;
+}
+
+.detailModalClose {
+  font-size: 16px;
+  padding: 6px 8px;
+  opacity: 0.7;
+}
+
+.detailBackBtn:hover,
+.detailModalClose:hover {
+  background: rgba(0, 0, 0, 0.06);
+  opacity: 1;
+}

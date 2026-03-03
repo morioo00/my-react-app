@@ -3,7 +3,8 @@ import FullCalendar from "@fullcalendar/react";
 import interactionPlugin from "@fullcalendar/interaction";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import "./Calendar.css";
-import SearchHeader from "../SearchHeader/SearchHeader";
+import CalendarSearchPanel from "./search/CalendarSearchPanel";
+import mockSearcher from "./search/searchers/mockSearcher";
 
 function toDate(dateStr, timeStr) {
   const t = timeStr?.trim() ? timeStr.trim() : "00:00";
@@ -47,31 +48,7 @@ export default function Calendar() {
 
   const [events, setEvents] = useState([]);
 
-  // ===== 検索（あなた側を追加：相手の構造は壊さない）=====
-  const [q, setQ] = useState("");
-  const [searchText, setSearchText] = useState("");
 
-  const commitSearch = () => setQ(searchText.trim());
-  const clearSearch = () => {
-    setSearchText("");
-    setQ("");
-  };
-
-  // 📱 スマホで検索欄を開閉
-  const [searchOpen, setSearchOpen] = useState(false);
-
-  // 検索反映：title / memo / creator を対象に絞り込み
-  const filteredEvents = useMemo(() => {
-    const keyword = q.trim().toLowerCase();
-    if (!keyword) return events;
-
-    return events.filter((e) => {
-      const t = (e.title ?? "").toLowerCase();
-      const m = (e.extendedProps?.memo ?? "").toLowerCase();
-      const c = (e.extendedProps?.creator ?? "").toLowerCase();
-      return t.includes(keyword) || m.includes(keyword) || c.includes(keyword);
-    });
-  }, [events, q]);
 
   // ===== 新規作成 =====
   const openModalForDate = (dateStr) => {
@@ -184,14 +161,8 @@ export default function Calendar() {
   return (
     <div className="app-container">
       <div className="calendar-area">
-        <SearchHeader
+        <CalendarSearchPanel
           title={viewTitle || "Calendar"}
-          searchText={searchText}
-          onChangeSearchText={setSearchText}
-          onCommitSearch={commitSearch}
-          onClearSearch={clearSearch}
-          searchOpen={searchOpen}
-          onToggleSearchOpen={() => setSearchOpen((v) => !v)}
           rightControls={
             <>
               <button className="calBtn" type="button" onClick={goToday}>
@@ -205,6 +176,7 @@ export default function Calendar() {
               </button>
             </>
           }
+          searcher={mockSearcher}
         />
 
         {/* ===== モーダル（動作が確実な版：TNao側） ===== */}
@@ -331,7 +303,7 @@ export default function Calendar() {
           datesSet={(arg) => setViewTitle(arg.view.title)}
           dateClick={handleDateClick}
           eventClick={handleEventClick}
-          events={filteredEvents}
+          events={events}
           eventContent={(arg) => {
             const creator = arg.event.extendedProps.creator;
             return (
@@ -347,15 +319,6 @@ export default function Calendar() {
           }}
         />
 
-        {/*
-          ===== nasu側のモーダル案（現状は未完成のままコンフリクトに混ざっていたので、壊さず“残す”）=====
-          - overlayクリックで閉じる（onClick={() => setOpen(false)}）の発想は良い
-          - ただし当時のコードは以下が未完成だった：
-            - textarea の onChange が setMemo していない
-            - reminder の select options が未実装
-            - JSX の閉じタグ/括弧が崩れていてビルドが通らない
-          - もしこのデザインに切り替えるなら、次のステップで「このブロックを完成させて置換」がおすすめ
-        */}
       </div>
     </div>
   );
