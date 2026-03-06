@@ -1,9 +1,9 @@
-// src/components/calendar/search/searchers/apiSearcher.js
+
 export default async function apiSearcher(query) {
   const q = (query ?? "").trim();
   if (!q) return [];
 
-  const res = await fetch(`/api/events/search?q=${encodeURIComponent(q)}`, {
+  const res = await fetch(`/api/events/search?keyword=${encodeURIComponent(q)}`, {
     method: "GET",
     headers: { "Accept": "application/json" },
   });

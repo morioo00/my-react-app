@@ -227,13 +227,21 @@ export default function Calendar() {
 
     const saved = await res.json(); // EventResponseDto想定
 
-    // FullCalendar用にstateへ反映（表示に必要なのは start/end + extendedProps）
-    if (currentRange) {
-      await fetchEventsRange(currentRange.start, currentRange.end);
-    };
+const newEvent = {
+  id: String(saved.id),
+  title: saved.title,
+  start: saved.startAt ?? saved.start,
+  end: saved.endAt ?? saved.end,
+  extendedProps: {
+    creator: saved.authorUsername,
+    memo: saved.memo,
+  },
+};
 
-    setOpen(false);
-    return;
+setEvents((prev) => [...prev, newEvent]);
+
+setOpen(false);
+return;
   } catch (e) {
     console.error(e);
     alert("保存に失敗しました");
