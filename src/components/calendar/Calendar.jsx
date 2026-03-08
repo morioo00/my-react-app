@@ -227,16 +227,16 @@ export default function Calendar() {
 
     const saved = await res.json(); // EventResponseDto想定
 
-const newEvent = {
-  id: String(saved.id),
-  title: saved.title,
-  start: saved.startAt ?? saved.start,
-  end: saved.endAt ?? saved.end,
-  extendedProps: {
-    creator: saved.authorUsername,
-    memo: saved.memo,
-  },
-};
+    const newEvent = {
+      id: String(saved.id),
+      title: saved.title,
+      start: saved.startAt ?? saved.start,
+      end: saved.endAt ?? saved.end,
+      extendedProps: {
+        creator: saved.authorUsername,
+        memo: saved.memo,
+      },
+    };
 
 setEvents((prev) => [...prev, newEvent]);
 

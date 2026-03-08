@@ -7,6 +7,7 @@ import com.example.backend.repository.UserRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+import com.example.backend.config.JwtUtil;
 
 import java.util.Optional;
 
@@ -17,9 +18,11 @@ public class AuthController {
 
     private final UserRepository userRepository;
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+    private final JwtUtil jwtUtil;
 
-    public AuthController(UserRepository userRepository) {
+    public AuthController(UserRepository userRepository, JwtUtil jwtUtil) {
         this.userRepository = userRepository;
+        this.jwtUtil = jwtUtil;
     }
 
     @PostMapping("/register")
@@ -73,6 +76,7 @@ public class AuthController {
                     .body("ユーザー名またはパスワードが違います");
         }
 
-        return ResponseEntity.ok("ログイン成功");
+        String token = jwtUtil.generateToken(user.getUsername());
+        return ResponseEntity.ok(token);
     }
 }

@@ -1,6 +1,5 @@
 package com.example.backend.entity;
 
-import com.example.backend.entity.User;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
