@@ -6,6 +6,7 @@ import "./Calendar.css";
 import CalendarSearchPanel from "./search/CalendarSearchPanel";
 import mockSearcher from "./search/searchers/mockSearcher";
 import apiSearcher from "./search/searchers/apiSearcher";
+import authFetch from "../auth/authFetch"; 
 
 function toDate(dateStr, timeStr) {
   const t = timeStr?.trim() ? timeStr.trim() : "00:00";
@@ -22,19 +23,19 @@ export default function Calendar() {
   const goNext = () => calApi()?.next();
 
   const jumpToDate = (dateLike) => {
-  const d = dateLike instanceof Date ? dateLike : new Date(dateLike);
+    const d = dateLike instanceof Date ? dateLike : new Date(dateLike);
 
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  const ymd = `${yyyy}-${mm}-${dd}`;
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    const ymd = `${yyyy}-${mm}-${dd}`;
 
-  setHighlightDate(ymd);       // ←ハイライトしたい日を保存
-  calApi()?.gotoDate(d);       // ←月移動（/その日へ移動）
+    setHighlightDate(ymd); // ←ハイライトしたい日を保存
+    calApi()?.gotoDate(d); // ←月移動（/その日へ移動）
 
-  // 1.2秒後に消す（好みで時間調整OK）
-  setTimeout(() => setHighlightDate(null), 2000);
-};
+    // 1.2秒後に消す（好みで時間調整OK）
+    setTimeout(() => setHighlightDate(null), 2000);
+  };
 
   const [open, setOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState("");
@@ -86,9 +87,11 @@ export default function Calendar() {
     const fromISO = toLocalIsoSec(startDate);
     const toISO = toLocalIsoSec(endDate);
 
-    const res = await fetch(
+    // JWT付きでイベント一覧取得
+    const res = await authFetch(
       `/api/events?from=${encodeURIComponent(fromISO)}&to=${encodeURIComponent(toISO)}`
     );
+
     if (!res.ok) throw new Error(`GET /api/events failed: ${res.status}`);
 
     const dtos = await res.json(); // CalendarEventDto[]
@@ -96,7 +99,7 @@ export default function Calendar() {
     const mapped = dtos.map((dto) => ({
       id: String(dto.id),
       title: dto.title,
-      start: dto.startAt ?? dto.start, // ←どっちでも動くよう保険
+      start: dto.startAt ?? dto.start, 
       end: dto.endAt ?? dto.end,
       extendedProps: {
         creator: dto.authorUsername,
@@ -107,7 +110,7 @@ export default function Calendar() {
     setEvents(mapped);
   };
 
-    // 月移動・表示範囲変更のたびに：タイトル更新＋その範囲をDBから再取得
+  // 月移動・表示範囲変更のたびに：タイトル更新＋その範囲をDBから再取得
   const handleDatesSet = async (arg) => {
     setViewTitle(arg.view.title);
 
@@ -116,8 +119,8 @@ export default function Calendar() {
       end: arg.end,
     });
 
-      await fetchEventsRange(arg.start, arg.end);
-      };
+    await fetchEventsRange(arg.start, arg.end);
+  };
 
   // ===== 新規作成 =====
   const openModalForDate = (dateStr) => {
@@ -202,52 +205,54 @@ export default function Calendar() {
         )
       );
     } else {
-  // 新規（DBへ保存）
-  const pad = (n) => String(n).padStart(2, "0");
-  const toLocalIso = (d) =>
-    `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
-      d.getHours()
-    )}:${pad(d.getMinutes())}`;
+      // 新規（DBへ保存）
+      const pad = (n) => String(n).padStart(2, "0");
+      const toLocalIso = (d) =>
+        `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
+          d.getHours()
+        )}:${pad(d.getMinutes())}`;
 
-  const payload = {
-    title: title.trim(),
-    memo: memo ?? "",
-    startAt: toLocalIso(start),
-    endAt: toLocalIso(end),
+      const payload = {
+        title: title.trim(),
+        memo: memo ?? "",
+        startAt: toLocalIso(start),
+        endAt: toLocalIso(end),
+      };
+
+      try {
+        // JWT付きでイベント保存
+        const res = await authFetch("/api/events", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        if (!res.ok) throw new Error(`POST failed: ${res.status}`);
+
+        const saved = await res.json(); // EventResponseDto想定
+
+        const newEvent = {
+          id: String(saved.id),
+          title: saved.title,
+          start: saved.startAt ?? saved.start,
+          end: saved.endAt ?? saved.end,
+          extendedProps: {
+            creator: saved.authorUsername,
+            memo: saved.memo,
+          },
+        };
+
+        setEvents((prev) => [...prev, newEvent]);
+
+        setOpen(false);
+        return;
+      } catch (e) {
+        console.error(e);
+        alert("保存に失敗しました");
+        return;
+      }
+    }
   };
-
-  try {
-    const res = await fetch("/api/events", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-
-    if (!res.ok) throw new Error(`POST failed: ${res.status}`);
-
-    const saved = await res.json(); // EventResponseDto想定
-
-    const newEvent = {
-      id: String(saved.id),
-      title: saved.title,
-      start: saved.startAt ?? saved.start,
-      end: saved.endAt ?? saved.end,
-      extendedProps: {
-        creator: saved.authorUsername,
-        memo: saved.memo,
-      },
-    };
-
-setEvents((prev) => [...prev, newEvent]);
-
-setOpen(false);
-return;
-  } catch (e) {
-    console.error(e);
-    alert("保存に失敗しました");
-    return;
-  }
-}}
 
   // ===== ハイライト表示用：eventsに背景イベントを混ぜる =====
   const viewEvents = useMemo(() => {
@@ -257,8 +262,7 @@ return;
 
     const endDate = new Date(`${highlightDate}T00:00:00`);
     endDate.setDate(endDate.getDate() + 1);
-    const end =
-      `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, "0")}-${String(endDate.getDate()).padStart(2, "0")}T00:00:00`;
+    const end = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, "0")}-${String(endDate.getDate()).padStart(2, "0")}T00:00:00`;
 
     const highlightBg = {
       id: "__highlight__",
@@ -293,7 +297,6 @@ return;
           onJumpToDate={jumpToDate}
         />
 
-        {/* ===== モーダル（動作が確実な版：TNao側） ===== */}
         {open && (
           <div className="modal-overlay" onClick={() => setOpen(false)}>
             <div className="modal-box" onClick={(e) => e.stopPropagation()}>
@@ -418,7 +421,6 @@ return;
           dateClick={handleDateClick}
           eventClick={handleEventClick}
           events={events}
-
           dayCellClassNames={(arg) => {
             if (!highlightDate) return [];
             const y = arg.date.getFullYear();
@@ -441,7 +443,6 @@ return;
             );
           }}
         />
-
       </div>
     </div>
   );
