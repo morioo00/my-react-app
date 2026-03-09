@@ -1,9 +1,10 @@
+import authFetch from "../../../auth/authFetch";
 
 export default async function apiSearcher(query) {
   const q = (query ?? "").trim();
   if (!q) return [];
 
-  const res = await fetch(`/api/events/search?keyword=${encodeURIComponent(q)}`, {
+  const res = await authFetch(`/api/events/search?keyword=${encodeURIComponent(q)}`, {
     method: "GET",
     headers: { "Accept": "application/json" },
   });
