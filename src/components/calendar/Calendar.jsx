@@ -1,13 +1,8 @@
 import { useMemo, useState } from "react";
-import FullCalendar from "@fullcalendar/react";
-import interactionPlugin from "@fullcalendar/interaction";
-import dayGridPlugin from "@fullcalendar/daygrid";
 import "./Calendar.css";
-
-function toDate(dateStr, timeStr) {
-  const t = timeStr?.trim() ? timeStr.trim() : "00:00";
-  return new Date(`${dateStr}T${t}:00`);
-}
+import CalendarView from "./parts/CalendarView";
+import EventModal from "./parts/EventModal";
+import { toDate } from "./utils/date";
 
 export default function CalendarPage() {
   const [open, setOpen] = useState(false);
@@ -28,8 +23,8 @@ export default function CalendarPage() {
     ],
     []
   );
-  const [reminder, setReminder] = useState("none");
 
+  const [reminder, setReminder] = useState("none");
   const [isSurvey, setIsSurvey] = useState(false);
   const [deadlineDate, setDeadlineDate] = useState("");
   const [deadlineTime, setDeadlineTime] = useState("23:59");
@@ -38,7 +33,6 @@ export default function CalendarPage() {
 
   const openModalForDate = (dateStr) => {
     setSelectedDate(dateStr);
-
     setTitle("");
     setMemo("");
     setStartTime("09:00");
@@ -47,12 +41,10 @@ export default function CalendarPage() {
     setIsSurvey(false);
     setDeadlineDate(dateStr);
     setDeadlineTime("23:59");
-
     setOpen(true);
   };
 
   const handleDateClick = (info) => {
-    // FullCalendarは dateStr
     openModalForDate(info.dateStr);
   };
 
@@ -90,79 +82,25 @@ export default function CalendarPage() {
 
   return (
     <div className="app-container">
-      <div className="calendar-area">
-        <FullCalendar
-          plugins={[dayGridPlugin, interactionPlugin]}
-          initialView="dayGridMonth"
-          height="100%"
-          expandRows={true}
-          dateClick={handleDateClick}
-          events={events}
-        />
-      </div>
-      {open && (
-        <div className="modal-overlay" onClick={() => setOpen(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h2 className="modal-title">投稿</h2> 
-    
-           <div className="modal-field">
-            <div className="modal-label">日付</div>
-            <div className="modal-value">{selectedDate}</div>
-            </div>
+      <CalendarView events={events} onDateClick={handleDateClick} />
 
-           <div className="modal-field">
-             <div className="modal-label">タイトル</div>
-            <input
-             className="input"
-             value={title}
-             onChange={(e) => setTitle(e.target.value)}
-             />
-             </div> 
-
-           <div className="modal-field">
-            <div className="modal-label">内容のメモ</div>
-            <textarea
-             className="textarea"
-             rows={2}
-             value={memo}
-             onChange={(e) => (e.target.value)}
-             />
-            </div>
-
-            <div className="modal-field">
-             <div className="modal-label">時間</div>
-             <input
-              className="input"
-              type="time"
-              step={300}
-              value={startTime}
-              onChange={(e) => setStartTime(e.target.value)}
-             /> 
-             <span className="dash">～</span>
-             <input 
-              className="input"
-              type="time"
-              step={300}
-              min={startTime}
-              value={endTime}
-              onChange={(e) => setEndTime(e.target.value)}
-             />
-            </div>
-
-            <div className="modal-field">
-              <div className="modal-label">通知</div>
-              <select
-               className="select"
-               value={reminder}
-               onChange={(e) => setReminder(e.target.value)}
-               >
-                {reminder
-
-                }
-            </div>
-
-      )}
-  </div>
+      <EventModal
+        open={open}
+        selectedDate={selectedDate}
+        title={title}
+        memo={memo}
+        startTime={startTime}
+        endTime={endTime}
+        reminder={reminder}
+        reminderOptions={reminderOptions}
+        onClose={() => setOpen(false)}
+        onChangeTitle={(e) => setTitle(e.target.value)}
+        onChangeMemo={(e) => setMemo(e.target.value)}
+        onChangeStartTime={(e) => setStartTime(e.target.value)}
+        onChangeEndTime={(e) => setEndTime(e.target.value)}
+        onChangeReminder={(e) => setReminder(e.target.value)}
+        onSave={handleSave}
+      />
+    </div>
   );
 }
-  
