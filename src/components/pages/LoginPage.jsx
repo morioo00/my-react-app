@@ -8,6 +8,7 @@ import UsernameInput from "../Login/UsernameInput";
 import PasswordInput from "../Login/PasswordInput";
 import LoginButton from "../Login/LoginButton";
 import NewAccountButton from "../Login/NewAccountButton";
+import { saveToken } from "../auth/tokenStorage";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
@@ -15,6 +16,7 @@ export default function LoginPage() {
   const [errorMessage, setErrorMessage] = useState(""); // ★追加
   const [isLoading, setIsLoading] = useState(false);    // ★任意（押し連打防止）
   const [successMessage, setSuccessMessage] = useState("");
+  
 
   const navigate = useNavigate(); // ★追加
 
@@ -35,6 +37,8 @@ export default function LoginPage() {
         setErrorMessage(text || "ログインに失敗しました");
         return;
       }
+       saveToken(text);
+
        setSuccessMessage("ログイン成功！3秒後に遷移します。");
 
        setTimeout(() => {

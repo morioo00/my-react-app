@@ -1,0 +1,179 @@
+/* SearchHeader.css */
+
+/* ====== ヘッダー全体：3列（左：タイトル / 中央：検索 / 右：操作） ====== */
+.calHeader {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+
+  padding: 12px 12px 8px;
+  border-bottom: 1px solid #e6e6e6;
+  background: #fff;
+
+  position: relative; /* モバイル展開検索を中で使う用 */
+}
+
+/* タイトル（互換：calTitle / searchHeaderTitle どっちでもOK） */
+.calTitle,
+.searchHeaderTitle {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* ====== PC用検索（中央列で伸び縮み） ====== */
+.calSearch {
+  justify-self: center;
+  position: relative;
+  width: min(520px, 100%);
+  min-width: 0;
+}
+
+.calSearchInput {
+  width: 100%;
+  height: 38px;
+
+  border-radius: 12px;
+  border: 1px solid #dcdcdc;
+  padding: 0 44px 0 14px; /* 右の🔍分の余白 */
+  font-size: 14px;
+  outline: none;
+  background: #fff;
+
+  box-sizing: border-box;
+}
+
+.calSearchInput:focus {
+  border-color: #b7b7b7;
+}
+
+.calSearchBtn {
+  position: absolute;
+  right: 2px;
+  top: 0;
+  height: 100%;
+  width: 36px;
+
+  border: none;
+  background: transparent;
+  cursor: pointer;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 18px;
+  border-radius: 10px;
+}
+
+.calSearchBtn:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+/* ====== 右側操作ボタン群 ====== */
+.calControls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+/* スマホ用 🔍 ボタン（通常はPCで非表示、スマホで表示） */
+.calIconBtn {
+  height: 36px;
+  width: 36px;
+
+  display: none;            /* ←PCでは隠す */
+  align-items: center;
+  justify-content: center;  /* ←🔍ど真ん中 */
+
+  border: 1px solid #dcdcdc;
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+
+  padding: 0;
+  line-height: 1;
+}
+
+.calIconBtn:hover {
+  background: #f6f6f6;
+}
+
+/* ====== スマホ用：展開検索（ヘッダーの“下段”に表示する） ====== */
+.calSearchMobile {
+  grid-column: 1 / -1; /* 3列全部に跨る */
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 8px;
+
+  position: relative; /* ✕ボタンを重ねるなら基準になる */
+}
+
+.calSearchMobileInput {
+  flex: 1;
+  height: 38px;
+
+  border-radius: 12px;
+  border: 1px solid #dcdcdc;
+  padding: 0 14px;
+  font-size: 14px;
+  outline: none;
+  background: #fff;
+
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.calSearchMobileInput:focus {
+  border-color: #b7b7b7;
+}
+
+.calSearchMobileClose {
+  height: 38px;
+  width: 44px;
+
+  border: 1px solid #dcdcdc;
+  border-radius: 12px;
+  background: #fff;
+  cursor: pointer;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 0;
+  line-height: 1;
+}
+
+.calSearchMobileClose:hover {
+  background: #f6f6f6;
+}
+
+/* ====== レスポンシブ切り替え ====== */
+@media (max-width: 767px) {
+  /* PC用検索欄は消す */
+  .calSearch {
+    display: none;
+  }
+  /* 代わりに虫眼鏡ボタンを出す */
+  .calIconBtn {
+    display: inline-flex;
+  }
+
+  /* タイトルはスマホでは少し小さめが安定（※160pxは削除） */
+  .calTitle,
+  .searchHeaderTitle {
+    font-size: 20px;
+  }
+}
+
+@media (min-width: 768px) {
+  /* PCではスマホ虫眼鏡ボタンは隠す */
+  .calIconBtn {
+    display: none;
+  }
+}
