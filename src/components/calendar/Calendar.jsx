@@ -331,7 +331,7 @@ export default function Calendar() {
   return (
     <div className="app-container notranslate" translate="no">
       {/* PC上の日本語/英語翻訳対策 */}
-
+      
       <div className="calendar-area">
         <CalendarSearchPanel
           title={viewTitle || "Calendar"}
