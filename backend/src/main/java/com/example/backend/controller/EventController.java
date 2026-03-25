@@ -101,38 +101,42 @@ public class EventController {
     }
 
     // =========================
-    // イベント更新
+// イベント更新
+// =========================
+@PutMapping("/{id}")
+public EventResponseDto updateEvent(
+        @PathVariable Long id,
+        @RequestBody Event updatedEvent) {
+
+    Event event = repo.findById(id)
+            .orElseThrow(() -> new RuntimeException("Event not found"));
+
+    event.setTitle(updatedEvent.getTitle());
+    event.setMemo(updatedEvent.getMemo());
+    event.setStartAt(updatedEvent.getStartAt());
+    event.setEndAt(updatedEvent.getEndAt());
+
+    Event saved = repo.save(event);
+
+    return new EventResponseDto(
+            saved.getId(),
+            saved.getTitle(),
+            saved.getMemo(),
+            saved.getStartAt(),
+            saved.getEndAt(),
+            saved.getAuthor() != null ? saved.getAuthor().getUsername() : null
+    );
+}
+
     // =========================
-    @PutMapping("/{id}")
-    public EventResponseDto updateEvent(
-            @PathVariable Long id,
-            @RequestBody Event updatedEvent) {
+// イベント削除
+// =========================
+@DeleteMapping("/{id}")
+public void deleteEvent(@PathVariable Long id) {
 
-        Event event = repo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Event not found"));
+    Event event = repo.findById(id)
+            .orElseThrow(() -> new RuntimeException("Event not found"));
 
-        event.setTitle(updatedEvent.getTitle());
-        event.setMemo(updatedEvent.getMemo());
-        event.setStartAt(updatedEvent.getStartAt());
-        event.setEndAt(updatedEvent.getEndAt());
-
-        Event saved = repo.save(event);
-
-        return new EventResponseDto(
-                saved.getId(),
-                saved.getTitle(),
-                saved.getMemo(),
-                saved.getStartAt(),
-                saved.getEndAt(),
-                saved.getAuthor() != null ? saved.getAuthor().getUsername() : null
-        );
-    }
-
-    // =========================
-    // イベント削除
-    // =========================
-    @DeleteMapping("/{id}")
-    public void deleteEvent(@PathVariable Long id) {
-        repo.deleteById(id);
-    }
+    repo.delete(event);
+}
 }

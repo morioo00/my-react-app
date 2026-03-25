@@ -6,7 +6,7 @@ import "./Calendar.css";
 import CalendarSearchPanel from "./search/CalendarSearchPanel";
 import mockSearcher from "./search/searchers/mockSearcher";
 import apiSearcher from "./search/searchers/apiSearcher";
-import authFetch from "../auth/authFetch"; 
+import authFetch from "../auth/authFetch";
 
 function toDate(dateStr, timeStr) {
   const t = timeStr?.trim() ? timeStr.trim() : "00:00";
@@ -99,7 +99,7 @@ export default function Calendar() {
     const mapped = dtos.map((dto) => ({
       id: String(dto.id),
       title: dto.title,
-      start: dto.startAt ?? dto.start, 
+      start: dto.startAt ?? dto.start,
       end: dto.endAt ?? dto.end,
       extendedProps: {
         creator: dto.authorUsername,
@@ -170,6 +170,9 @@ export default function Calendar() {
 
   // ===== 保存 =====
   const handleSave = async () => {
+
+    console.log("save mode:", editingEventId);
+
     if (!title.trim()) return;
 
     const start = toDate(selectedDate, startTime);
@@ -181,36 +184,12 @@ export default function Calendar() {
     }
 
     if (editingEventId) {
-      // 更新
-      setEvents((prev) =>
-        prev.map((e) =>
-          e.id === editingEventId
-            ? {
-                ...e,
-                title: title.trim(),
-                start,
-                end,
-                extendedProps: {
-                  creator,
-                  memo,
-                  reminder,
-                  isSurvey,
-                  deadline:
-                    isSurvey && deadlineDate
-                      ? toDate(deadlineDate, deadlineTime).toISOString()
-                      : null,
-                },
-              }
-            : e
-        )
-      );
-    } else {
-      // 新規（DBへ保存）
       const pad = (n) => String(n).padStart(2, "0");
+
       const toLocalIso = (d) =>
-        `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
-          d.getHours()
-        )}:${pad(d.getMinutes())}`;
+        `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(
+          d.getDate()
+        )}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 
       const payload = {
         title: title.trim(),
@@ -220,16 +199,66 @@ export default function Calendar() {
       };
 
       try {
-        // JWT付きでイベント保存
+        const res = await authFetch(`/api/events/${editingEventId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+
+
+        if (!res.ok) throw new Error("update failed");
+
+        const updated = await res.json();
+
+        const updatedEvent = {
+          id: String(updated.id),
+          title: updated.title,
+          start: updated.startAt ?? updated.start,
+          end: updated.endAt ?? updated.end,
+          extendedProps: {
+            creator: updated.authorUsername,
+            memo: updated.memo,
+          },
+        };
+
+        setEvents((prev) =>
+          prev.map((e) => (e.id === editingEventId ? updatedEvent : e))
+        );
+
+        setOpen(false);
+        return;
+      } catch (e) {
+        console.error(e);
+        alert("更新に失敗しました");
+        return;
+      }
+    }
+    else {
+      const pad = (n) => String(n).padStart(2, "0");
+
+      const toLocalIso = (d) =>
+        `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(
+          d.getDate()
+        )}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+
+      const payload = {
+        title: title.trim(),
+        memo: memo ?? "",
+        startAt: toLocalIso(start),
+        endAt: toLocalIso(end),
+      };
+
+      try {
         const res = await authFetch("/api/events", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
 
-        if (!res.ok) throw new Error(`POST failed: ${res.status}`);
+        if (!res.ok) throw new Error("create failed");
 
-        const saved = await res.json(); // EventResponseDto想定
+        const saved = await res.json();
 
         const newEvent = {
           id: String(saved.id),
@@ -251,6 +280,30 @@ export default function Calendar() {
         alert("保存に失敗しました");
         return;
       }
+    }
+  };
+
+  // ===== 削除 =====
+  const handleDelete = async () => {
+    if (!editingEventId) return;
+
+    if (!confirm("この予定を削除しますか？")) return;
+
+    try {
+      const res = await authFetch(`/api/events/${editingEventId}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) throw new Error("delete failed");
+
+      setEvents((prev) =>
+        prev.filter((e) => e.id !== editingEventId)
+      );
+
+      setOpen(false);
+    } catch (e) {
+      console.error(e);
+      alert("削除に失敗しました");
     }
   };
 
@@ -400,6 +453,20 @@ export default function Calendar() {
                 <button onClick={handleSave}>
                   {editingEventId ? "更新" : "保存"}
                 </button>
+
+                {editingEventId && (
+                  <button
+                    onClick={handleDelete}
+                    style={{
+                      marginLeft: "10px",
+                      background: "#e74c3c",
+                      color: "white"
+                    }}
+                  >
+                    削除
+                  </button>
+                )}
+
                 <button
                   onClick={() => setOpen(false)}
                   style={{ marginLeft: "10px" }}
