@@ -1,16 +1,17 @@
+// authFetch.js
 import { getToken } from "./tokenStorage";
 
-// JWTを自動でAuthorizationヘッダーに付ける共通fetch
 export default async function authFetch(url, options = {}) {
   const token = getToken();
+  console.log("authFetch token:", token); // ←ここでブラウザに出力されるか確認
 
   const headers = {
+    "Content-Type": "application/json",
     ...(options.headers || {}),
   };
 
-  // JWTがあるときだけ Bearer ヘッダーを付ける
   if (token) {
-    headers.Authorization = `Bearer ${token}`;
+    headers.Authorization = `Bearer ${token}`; // ←バックエンドが期待する形式
   }
 
   return fetch(url, {

@@ -7,6 +7,7 @@ import CalendarSearchPanel from "./search/CalendarSearchPanel";
 import mockSearcher from "./search/searchers/mockSearcher";
 import apiSearcher from "./search/searchers/apiSearcher";
 import authFetch from "../auth/authFetch";
+import { getToken } from "../auth/tokenStorage";
 
 function toDate(dateStr, timeStr) {
   const t = timeStr?.trim() ? timeStr.trim() : "00:00";
@@ -83,19 +84,21 @@ export default function Calendar() {
     return { start, end };
   };
 
-  const fetchEventsRange = async (startDate, endDate) => {
-    const fromISO = toLocalIsoSec(startDate);
-    const toISO = toLocalIsoSec(endDate);
+const fetchEventsRange = async (startDate, endDate) => {
+  const fromISO = startDate.toISOString();
+  const toISO = endDate.toISOString();
 
-    // JWT付きでイベント一覧取得
+  try {
     const res = await authFetch(
-      `/api/events?from=${encodeURIComponent(fromISO)}&to=${encodeURIComponent(toISO)}`
+      `http://localhost:8080/api/events?from=${encodeURIComponent(fromISO)}&to=${encodeURIComponent(toISO)}`
     );
+    console.log("events fetch response", res);
 
-    if (!res.ok) throw new Error(`GET /api/events failed: ${res.status}`);
+    if (!res.ok) {
+      throw new Error(`GET /api/events failed: ${res.status}`);
+    }
 
-    const dtos = await res.json(); // CalendarEventDto[]
-    // FullCalendar形式へ変換
+    const dtos = await res.json();
     const mapped = dtos.map((dto) => ({
       id: String(dto.id),
       title: dto.title,
@@ -108,7 +111,11 @@ export default function Calendar() {
     }));
 
     setEvents(mapped);
-  };
+  } catch (e) {
+    console.error(e);
+    alert("イベント取得に失敗しました: " + e.message);
+  }
+};
 
   // 月移動・表示範囲変更のたびに：タイトル更新＋その範囲をDBから再取得
   const handleDatesSet = async (arg) => {
@@ -199,7 +206,7 @@ export default function Calendar() {
       };
 
       try {
-        const res = await authFetch(`/api/events/${editingEventId}`, {
+        const res = await authFetch(`http://localhost:8080/api/events/${editingEventId}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
@@ -250,7 +257,7 @@ export default function Calendar() {
       };
 
       try {
-        const res = await authFetch("/api/events", {
+        const res = await authFetch("http://localhost:8080/api/events", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
@@ -290,7 +297,7 @@ export default function Calendar() {
     if (!confirm("この予定を削除しますか？")) return;
 
     try {
-      const res = await authFetch(`/api/events/${editingEventId}`, {
+      const res = await authFetch(`http://localhost:8080/api/events/${editingEventId}`, {
         method: "DELETE",
       });
 

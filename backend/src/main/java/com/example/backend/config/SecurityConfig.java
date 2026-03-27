@@ -7,38 +7,40 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
-@Configuration
+
+    @Configuration
 public class SecurityConfig {
-
-    private final JwtAuthenticationFilter jwtAuthenticationFilter;
-
-    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
-        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
-    }
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-
         http
-            // REST APIやH2アクセスではCSRF無効化
+            .cors(cors -> {}) // ← 追加
             .csrf(csrf -> csrf.disable())
-
-            // パスごとのアクセス制御
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/h2-console/**").permitAll()   // H2 Console 許可
-                .requestMatchers("/api/auth/**").permitAll()     // ログイン・登録許可
+                .requestMatchers("/api/auth/**").permitAll()
                 .anyRequest().authenticated()
             )
-
-            // H2 Console の iframe 表示を許可
-            .headers(headers -> headers.frameOptions(frame -> frame.disable()))
-
-            // JWT 前提のステートレス
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
-
-        // JWTフィルターを UsernamePasswordAuthenticationFilter の前に追加
-        http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+            .oauth2ResourceServer(oauth2 -> oauth2
+    .jwt(jwt -> jwt
+        .jwkSetUri("https://<your-supabase-project>.supabase.co/auth/v1/.well-known/jwks.json")
+    )
+);
 
         return http.build();
+    }
+
+    @Bean
+    public org.springframework.web.cors.CorsConfigurationSource corsConfigurationSource() {
+        org.springframework.web.cors.CorsConfiguration config = new org.springframework.web.cors.CorsConfiguration();
+
+        config.addAllowedOrigin("http://localhost:5173");
+        config.addAllowedMethod("*");
+        config.addAllowedHeader("*");
+        config.setAllowCredentials(true);
+
+        org.springframework.web.cors.UrlBasedCorsConfigurationSource source =
+            new org.springframework.web.cors.UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return source;
     }
 }
