@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import com.example.backend.entity.User;
 
 import org.springframework.security.oauth2.jwt.Jwt;
 
@@ -32,42 +33,44 @@ public class EventController {
     // イベント作成
     // =========================
 
-@PostMapping
-public EventResponseDto create(@RequestBody Event event, Authentication auth) {
+    @PostMapping
+    public EventResponseDto create(@RequestBody Event event, Authentication auth) {
 
-    Jwt jwt = (Jwt) auth.getPrincipal();
+        Jwt jwt = (Jwt) auth.getPrincipal();
 
-    String email = jwt.getClaim("email");
+        String sub = jwt.getSubject(); // ここ追加
+        String email = jwt.getClaim("email"); // ここ既存の意味を変更して活用
 
-    var user = userRepository.findByUsername(email)
-            .orElseThrow(() -> new RuntimeException("User not found"));
+        var user = userRepository.findBySupabaseUserId(sub) // ここ変更
+                .orElseGet(() -> {
+                    User newUser = new User(); // ここ追加
+                    newUser.setSupabaseUserId(sub); // ここ追加
+                    newUser.setEmail(email); // ここ追加
+                    return userRepository.save(newUser); // ここ追加
+                });
 
-    event.setAuthor(user);
+        event.setAuthor(user);
 
-    Event saved = repo.save(event);
+        Event saved = repo.save(event);
 
-    return new EventResponseDto(
-            saved.getId(),
-            saved.getTitle(),
-            saved.getMemo(),
-            saved.getStartAt(),
-            saved.getEndAt(),
-            saved.getAuthor().getUsername()
-    );
-}
+        return new EventResponseDto(
+                saved.getId(),
+                saved.getTitle(),
+                saved.getMemo(),
+                saved.getStartAt(),
+                saved.getEndAt(),
+                saved.getAuthor() != null ? saved.getAuthor().getEmail() : null // ここ変更
+        );
+    }
 
     // =========================
     // イベント取得（カレンダー表示）
     // =========================
     @GetMapping
     public List<CalendarEventDto> list(
-            @RequestParam
-            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-            LocalDateTime from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
 
-            @RequestParam
-            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-            LocalDateTime to) {
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to) {
 
         return repo.findByStartAtLessThanAndEndAtGreaterThan(to, from)
                 .stream()
@@ -76,9 +79,8 @@ public EventResponseDto create(@RequestBody Event event, Authentication auth) {
                         e.getTitle(),
                         e.getStartAt().toString(),
                         e.getEndAt().toString(),
-                        e.getAuthor() != null ? e.getAuthor().getUsername() : null,
-                        e.getMemo()
-                ))
+                        e.getAuthor() != null ? e.getAuthor().getEmail() : null,
+                        e.getMemo()))
                 .toList();
     }
 
@@ -99,49 +101,47 @@ public EventResponseDto create(@RequestBody Event event, Authentication auth) {
                         e.getTitle(),
                         e.getStartAt().toString(),
                         e.getEndAt().toString(),
-                        e.getAuthor() != null ? e.getAuthor().getUsername() : null,
-                        e.getMemo()
-                ))
+                        e.getAuthor() != null ? e.getAuthor().getEmail() : null,
+                        e.getMemo()))
                 .toList();
     }
 
     // =========================
-// イベント更新
-// =========================
-@PutMapping("/{id}")
-public EventResponseDto updateEvent(
-        @PathVariable Long id,
-        @RequestBody Event updatedEvent) {
+    // イベント更新
+    // =========================
+    @PutMapping("/{id}")
+    public EventResponseDto updateEvent(
+            @PathVariable Long id,
+            @RequestBody Event updatedEvent) {
 
-    Event event = repo.findById(id)
-            .orElseThrow(() -> new RuntimeException("Event not found"));
+        Event event = repo.findById(id)
+                .orElseThrow(() -> new RuntimeException("Event not found"));
 
-    event.setTitle(updatedEvent.getTitle());
-    event.setMemo(updatedEvent.getMemo());
-    event.setStartAt(updatedEvent.getStartAt());
-    event.setEndAt(updatedEvent.getEndAt());
+        event.setTitle(updatedEvent.getTitle());
+        event.setMemo(updatedEvent.getMemo());
+        event.setStartAt(updatedEvent.getStartAt());
+        event.setEndAt(updatedEvent.getEndAt());
 
-    Event saved = repo.save(event);
+        Event saved = repo.save(event);
 
-    return new EventResponseDto(
-            saved.getId(),
-            saved.getTitle(),
-            saved.getMemo(),
-            saved.getStartAt(),
-            saved.getEndAt(),
-            saved.getAuthor() != null ? saved.getAuthor().getUsername() : null
-    );
-}
+        return new EventResponseDto(
+                saved.getId(),
+                saved.getTitle(),
+                saved.getMemo(),
+                saved.getStartAt(),
+                saved.getEndAt(),
+                saved.getAuthor() != null ? saved.getAuthor().getEmail() : null);
+    }
 
     // =========================
-// イベント削除
-// =========================
-@DeleteMapping("/{id}")
-public void deleteEvent(@PathVariable Long id) {
+    // イベント削除
+    // =========================
+    @DeleteMapping("/{id}")
+    public void deleteEvent(@PathVariable Long id) {
 
-    Event event = repo.findById(id)
-            .orElseThrow(() -> new RuntimeException("Event not found"));
+        Event event = repo.findById(id)
+                .orElseThrow(() -> new RuntimeException("Event not found"));
 
-    repo.delete(event);
-}
+        repo.delete(event);
+    }
 }

@@ -1,11 +1,11 @@
 package com.example.backend.entity;
 
 import jakarta.persistence.*;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Entity
 @Table(name = "users", uniqueConstraints = {
-        @UniqueConstraint(columnNames = "username")
+        @UniqueConstraint(columnNames = "supabase_user_id"),
+        @UniqueConstraint(columnNames = "email")
 })
 public class User {
 
@@ -13,30 +13,37 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
-    private String username;
+    @Column(name = "supabase_user_id", nullable = false, unique = true) // ここ変更
+    private String supabaseUserId;
 
-    @JsonIgnore
-    @Column(nullable = false)
-    private String passwordHash;
+    @Column(nullable = false, unique = true) // ここ変更
+    private String email;
 
-    protected User() {
+    public User() {
     } // JPA用
 
-    public User(String username, String passwordHash) {
-        this.username = username;
-        this.passwordHash = passwordHash;
+    public User(String supabaseUserId, String email) { // ここ変更
+        this.supabaseUserId = supabaseUserId;
+        this.email = email;
     }
 
     public Long getId() {
         return id;
     }
 
-    public String getUsername() {
-        return username;
+    public String getSupabaseUserId() { // ここ追加
+        return supabaseUserId;
     }
 
-    public String getPasswordHash() {
-        return passwordHash;
+    public String getEmail() { // ここ追加
+        return email;
+    }
+
+    public void setSupabaseUserId(String supabaseUserId) { // ここ追加
+        this.supabaseUserId = supabaseUserId;
+    }
+
+    public void setEmail(String email) { // ここ追加
+        this.email = email;
     }
 }
