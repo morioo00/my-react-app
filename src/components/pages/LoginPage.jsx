@@ -9,6 +9,7 @@ import PasswordInput from "../Login/PasswordInput";
 import LoginButton from "../Login/LoginButton";
 import NewAccountButton from "../Login/NewAccountButton";
 import { saveToken } from "../auth/tokenStorage";
+import { supabase } from "../../lib/supabaseClient";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
@@ -21,35 +22,37 @@ export default function LoginPage() {
   const navigate = useNavigate(); // ★追加
 
   const handleLogin = async () => {
-    setErrorMessage("");
-    setIsLoading(true);
+  setErrorMessage("");
+  setIsLoading(true);
 
-    try {
-      const res = await fetch("http://localhost:8080/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
-      });
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: username,
+      password,
+    });
 
-      const text = await res.text(); // ★バックエンドがStringなので text()
-
-      if (!res.ok) {
-        setErrorMessage(text || "ログインに失敗しました");
-        return;
-      }
-       saveToken(text);
-
-       setSuccessMessage("ログイン成功！3秒後に遷移します。");
-
-       setTimeout(() => {
-         navigate("/calendar");
-       }, 3000);
-    } catch (e) {
-      setErrorMessage("通信に失敗しました");
-    } finally {
-      setIsLoading(false);
+    if (error) {
+      setErrorMessage(error.message);
+      return;
     }
-  };
+
+    const token = data.session.access_token;
+
+    saveToken(token);
+
+    setSuccessMessage("ログイン成功！3秒後に遷移します。");
+
+    setTimeout(() => {
+      navigate("/calendar");
+    }, 3000);
+
+  } catch (e) {
+    console.error(e);
+    setErrorMessage("通信に失敗しました");
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const handleNewAccount = () => {
     navigate("/new-account"); // ★いまの想定ルート

@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import org.springframework.security.oauth2.jwt.Jwt;
+
 @RestController
 @RequestMapping("/api/events")
 @CrossOrigin(origins = "*")
@@ -29,27 +31,30 @@ public class EventController {
     // =========================
     // イベント作成
     // =========================
-    @PostMapping
-    public EventResponseDto create(@RequestBody Event event, Authentication auth) {
 
-        String username = auth.getName();
+@PostMapping
+public EventResponseDto create(@RequestBody Event event, Authentication auth) {
 
-        var user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+    Jwt jwt = (Jwt) auth.getPrincipal();
 
-        event.setAuthor(user);
+    String email = jwt.getClaim("email");
 
-        Event saved = repo.save(event);
+    var user = userRepository.findByUsername(email)
+            .orElseThrow(() -> new RuntimeException("User not found"));
 
-        return new EventResponseDto(
-                saved.getId(),
-                saved.getTitle(),
-                saved.getMemo(),
-                saved.getStartAt(),
-                saved.getEndAt(),
-                saved.getAuthor().getUsername()
-        );
-    }
+    event.setAuthor(user);
+
+    Event saved = repo.save(event);
+
+    return new EventResponseDto(
+            saved.getId(),
+            saved.getTitle(),
+            saved.getMemo(),
+            saved.getStartAt(),
+            saved.getEndAt(),
+            saved.getAuthor().getUsername()
+    );
+}
 
     // =========================
     // イベント取得（カレンダー表示）

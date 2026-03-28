@@ -1,44 +1,59 @@
 package com.example.backend.config;
 
+import java.util.List; // ここ既存 or 追加
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.convert.converter.Converter;
+import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 public class SecurityConfig {
 
-    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http
+                .cors(cors -> {
+                }) // ここ既存
+                .csrf(csrf -> csrf.disable())
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api/auth/**").permitAll()
+                        .anyRequest().authenticated())
+                // ここ変更
+                .oauth2ResourceServer(oauth2 -> oauth2
+                        .jwt(jwt -> jwt
+                                .jwtAuthenticationConverter(jwtAuthenticationConverter()) // ここ追加
+                        ));
 
-    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
-        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        return http.build();
+    }
+
+    // ここ追加
+    // Supabase JWT の role クレームを Spring Security の権限に変換する
+    private Converter<Jwt, AbstractAuthenticationToken> jwtAuthenticationConverter() {
+        return jwt -> {
+            String role = jwt.getClaimAsString("role");
+            var authorities = List.of(new SimpleGrantedAuthority("ROLE_" + role));
+            return new JwtAuthenticationToken(jwt, authorities);
+        };
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public org.springframework.web.cors.CorsConfigurationSource corsConfigurationSource() {
+        org.springframework.web.cors.CorsConfiguration config = new org.springframework.web.cors.CorsConfiguration();
 
-        http
-            // REST APIやH2アクセスではCSRF無効化
-            .csrf(csrf -> csrf.disable())
+        config.addAllowedOrigin("http://localhost:5173");
+        config.addAllowedMethod("*");
+        config.addAllowedHeader("*");
+        config.setAllowCredentials(true);
 
-            // パスごとのアクセス制御
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/h2-console/**").permitAll()   // H2 Console 許可
-                .requestMatchers("/api/auth/**").permitAll()     // ログイン・登録許可
-                .anyRequest().authenticated()
-            )
-
-            // H2 Console の iframe 表示を許可
-            .headers(headers -> headers.frameOptions(frame -> frame.disable()))
-
-            // JWT 前提のステートレス
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
-
-        // JWTフィルターを UsernamePasswordAuthenticationFilter の前に追加
-        http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
-
-        return http.build();
+        org.springframework.web.cors.UrlBasedCorsConfigurationSource source = new org.springframework.web.cors.UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return source;
     }
 }
