@@ -59,7 +59,12 @@ export default function Calendar() {
   );
 
   const [reminder, setReminder] = useState("none");
+
+  // ===== 追加: アンケート関連 =====
   const [isSurvey, setIsSurvey] = useState(false);
+  const [surveyContent, setSurveyContent] = useState("");
+  const [allowAttend, setAllowAttend] = useState(true);
+  const [allowAbsent, setAllowAbsent] = useState(true);
   const [deadlineDate, setDeadlineDate] = useState("");
   const [deadlineTime, setDeadlineTime] = useState("23:59");
 
@@ -104,6 +109,13 @@ export default function Calendar() {
       extendedProps: {
         creator: dto.authorUsername,
         memo: dto.memo,
+
+        // 追加: フロント側用の初期値
+        reminder: "none",
+        isSurvey: false,
+        surveyContent: "",
+        surveyOptions: [],
+        deadline: null,
       },
     }));
 
@@ -127,16 +139,21 @@ export default function Calendar() {
     setEditingEventId(null);
     setSelectedDate(dateStr);
 
-
     setCreator("");
     setTitle("");
     setMemo("");
     setStartTime("09:00");
     setEndTime("10:00");
     setReminder("none");
+
+    // 追加: 初期化
     setIsSurvey(false);
+    setSurveyContent("");
+    setAllowAttend(true);
+    setAllowAbsent(true);
     setDeadlineDate(dateStr);
     setDeadlineTime("23:59");
+
     setOpen(true);
   };
 
@@ -158,10 +175,23 @@ export default function Calendar() {
     setReminder(event.extendedProps.reminder || "none");
     setIsSurvey(event.extendedProps.isSurvey || false);
 
+    // 追加: アンケート情報を戻す
+    setSurveyContent(event.extendedProps.surveyContent || "");
+
+    const options = event.extendedProps.surveyOptions || [];
+    setAllowAttend(options.includes("参加する"));
+    setAllowAbsent(options.includes("参加しない"));
+
     if (event.extendedProps.deadline) {
       const d = new Date(event.extendedProps.deadline);
-      setDeadlineDate(d.toISOString().slice(0, 10));
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      setDeadlineDate(`${yyyy}-${mm}-${dd}`);
       setDeadlineTime(d.toTimeString().slice(0, 5));
+    } else {
+      setDeadlineDate(event.startStr.slice(0, 10));
+      setDeadlineTime("23:59");
     }
 
     setOpen(true);
@@ -169,7 +199,6 @@ export default function Calendar() {
 
   // ===== 保存 =====
   const handleSave = async () => {
-
     console.log("save mode:", editingEventId);
 
     if (!title.trim()) return;
@@ -180,6 +209,37 @@ export default function Calendar() {
     if (end <= start) {
       alert("終了時間は開始時間より後にしてください");
       return;
+    }
+
+    // 追加: アンケート用バリデーション
+    let deadline = null;
+    let surveyOptions = [];
+
+    if (isSurvey) {
+      if (!surveyContent.trim()) {
+        alert("アンケート内容を入力してください");
+        return;
+      }
+
+      if (allowAttend) surveyOptions.push("参加する");
+      if (allowAbsent) surveyOptions.push("参加しない");
+
+      if (surveyOptions.length === 0) {
+        alert("参加する / 参加しない の少なくともどちらかを選んでください");
+        return;
+      }
+
+      if (!deadlineDate) {
+        alert("締切日を入力してください");
+        return;
+      }
+
+      deadline = toDate(deadlineDate, deadlineTime);
+
+      if (deadline >= start) {
+        alert("締切は開始時間より前にしてください");
+        return;
+      }
     }
 
     if (editingEventId) {
@@ -204,8 +264,6 @@ export default function Calendar() {
           body: JSON.stringify(payload),
         });
 
-
-
         if (!res.ok) throw new Error("update failed");
 
         const updated = await res.json();
@@ -218,6 +276,13 @@ export default function Calendar() {
           extendedProps: {
             creator: updated.authorUsername,
             memo: updated.memo,
+
+            // 追加: フロントだけで保持
+            reminder,
+            isSurvey,
+            surveyContent: isSurvey ? surveyContent : "",
+            surveyOptions: isSurvey ? surveyOptions : [],
+            deadline: isSurvey && deadline ? deadline.toISOString() : null,
           },
         };
 
@@ -267,6 +332,13 @@ export default function Calendar() {
           extendedProps: {
             creator: saved.authorUsername,
             memo: saved.memo,
+
+            // 追加: フロントだけで保持
+            reminder,
+            isSurvey,
+            surveyContent: isSurvey ? surveyContent : "",
+            surveyOptions: isSurvey ? surveyOptions : [],
+            deadline: isSurvey && deadline ? deadline.toISOString() : null,
           },
         };
 
@@ -421,7 +493,7 @@ export default function Calendar() {
                 </select>
               </div>
 
-              {/* アンケート */}
+              {/* 追加: アンケート作成チェック */}
               <div>
                 <label>
                   <input
@@ -429,23 +501,62 @@ export default function Calendar() {
                     checked={isSurvey}
                     onChange={(e) => setIsSurvey(e.target.checked)}
                   />
-                  アンケート
+                  アンケートを作成する
                 </label>
               </div>
 
+              {/* 追加: チェックが入っている時だけ表示 */}
               {isSurvey && (
-                <div>
-                  <label>回答締切</label>
-                  <input
-                    type="date"
-                    value={deadlineDate}
-                    onChange={(e) => setDeadlineDate(e.target.value)}
-                  />
-                  <input
-                    type="time"
-                    value={deadlineTime}
-                    onChange={(e) => setDeadlineTime(e.target.value)}
-                  />
+                <div style={{ marginTop: "12px" }}>
+                  <div>
+                    <label>アンケート内容</label>
+                    <textarea
+                      value={surveyContent}
+                      onChange={(e) => setSurveyContent(e.target.value)}
+                      rows="3"
+                      placeholder="例: この会に参加しますか？"
+                    />
+                  </div>
+
+                  <div style={{ marginTop: "10px" }}>
+                    <label>回答項目</label>
+                    <div>
+                      <label style={{ display: "block" }}>
+                        <input
+                          type="checkbox"
+                          checked={allowAttend}
+                          onChange={(e) => setAllowAttend(e.target.checked)}
+                        />
+                        参加する
+                      </label>
+
+                      <label style={{ display: "block", marginTop: "4px" }}>
+                        <input
+                          type="checkbox"
+                          checked={allowAbsent}
+                          onChange={(e) => setAllowAbsent(e.target.checked)}
+                        />
+                        参加しない
+                      </label>
+                    </div>
+                  </div>
+
+                  <div style={{ marginTop: "10px" }}>
+                    <label>回答締切</label>
+                    <div>
+                      <input
+                        type="date"
+                        value={deadlineDate}
+                        onChange={(e) => setDeadlineDate(e.target.value)}
+                      />
+                      <input
+                        type="time"
+                        value={deadlineTime}
+                        onChange={(e) => setDeadlineTime(e.target.value)}
+                        style={{ marginLeft: "8px" }}
+                      />
+                    </div>
+                  </div>
                 </div>
               )}
 
