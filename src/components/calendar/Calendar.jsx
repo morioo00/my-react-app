@@ -9,6 +9,8 @@ import apiSearcher from "./search/searchers/apiSearcher";
 import authFetch from "../auth/authFetch";
 import { getToken } from "../auth/tokenStorage";
 
+import { supabase } from "../../lib/supabaseClient"; 
+
 function toDate(dateStr, timeStr) {
   const t = timeStr?.trim() ? timeStr.trim() : "00:00";
   return new Date(`${dateStr}T${t}:00`);
@@ -47,6 +49,26 @@ export default function Calendar() {
   const [memo, setMemo] = useState("");
   const [startTime, setStartTime] = useState("09:00");
   const [endTime, setEndTime] = useState("10:00");
+
+    useEffect(() => {
+    const fetchLoggedInUser = async () => {
+      try {
+        const { data, error } = await supabase.auth.getUser();
+
+        if (error) {
+          console.error("getUser error:", error);
+          return;
+        }
+
+        const email = data?.user?.email || "";
+        setCreator(email); // ここ追加
+      } catch (e) {
+        console.error("fetchLoggedInUser unexpected error:", e);
+      }
+    };
+
+    fetchLoggedInUser();
+  }, []);
 
   const reminderOptions = useMemo(
     () => [
@@ -146,7 +168,6 @@ const fetchEventsRange = async (startDate, endDate) => {
     setEditingEventId(null);
     setSelectedDate(dateStr);
 
-    setCreator("");
     setTitle("");
     setMemo("");
     setStartTime("09:00");
@@ -442,7 +463,7 @@ const fetchEventsRange = async (startDate, endDate) => {
                 <input
                   type="text"
                   value={creator}
-                  onChange={(e) => setCreator(e.target.value)}
+                  readOnly // ← ここ追加（編集不可）
                 />
               </div>
 
