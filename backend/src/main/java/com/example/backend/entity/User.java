@@ -1,6 +1,7 @@
 package com.example.backend.entity;
 
 import jakarta.persistence.*;
+import java.util.List;
 
 @Entity
 @Table(name = "users", uniqueConstraints = {
@@ -18,6 +19,9 @@ public class User {
 
     @Column(nullable = false, unique = true) // ここ変更
     private String email;
+
+    @OneToMany(mappedBy = "author")
+    private List<Event> events;
 
     public User() {
     } // JPA用
