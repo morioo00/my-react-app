@@ -4,11 +4,12 @@ function UsernameInput({ username, setUsername }) {
   return (
     <div className={styles.wrapper}>
       <input
-        type="text"
+        type="email"
         value={username}
         onChange={(e) => setUsername(e.target.value)}
-        placeholder="ユーザー名"
+        placeholder="メールアドレス"
         className={styles.input}
+        autoComplete="email"
       />
     </div>
   );

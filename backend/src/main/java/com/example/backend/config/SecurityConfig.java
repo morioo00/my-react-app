@@ -1,6 +1,6 @@
 package com.example.backend.config;
 
-import java.util.List; // ここ既存 or 追加
+import java.util.List;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -19,21 +19,19 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 .cors(cors -> {
-                }) // ここ既存
+                })
                 .csrf(csrf -> csrf.disable())
+                .headers(headers -> headers.frameOptions(frame -> frame.disable()))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/h2-console/**").permitAll()
                         .anyRequest().authenticated())
-                // ここ変更
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .jwt(jwt -> jwt
-                                .jwtAuthenticationConverter(jwtAuthenticationConverter()) // ここ追加
-                        ));
+                                .jwtAuthenticationConverter(jwtAuthenticationConverter())));
 
         return http.build();
     }
 
-    // ここ追加
     // Supabase JWT の role クレームを Spring Security の権限に変換する
     private Converter<Jwt, AbstractAuthenticationToken> jwtAuthenticationConverter() {
         return jwt -> {

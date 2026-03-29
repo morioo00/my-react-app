@@ -26,7 +26,7 @@ public class Event {
     @Column(nullable = false)
     private LocalDateTime endAt;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "author_id")
     private User author;
 
