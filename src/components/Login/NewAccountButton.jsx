@@ -7,7 +7,7 @@ export default function NewAccountButton() {
 
   return (
     <button className="new-account-button" onClick={() => navigate("/new-account")}>
-      新規作成
+      アカウント新規作成
     </button>
   );
 }
