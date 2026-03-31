@@ -8,6 +8,7 @@ import mockSearcher from "./search/searchers/mockSearcher";
 import apiSearcher from "./search/searchers/apiSearcher";
 import authFetch from "../auth/authFetch";
 import { getToken } from "../auth/tokenStorage";
+import { isHoliday } from "./holidayUtils"; //祝日指定
 
 import { supabase } from "../../lib/supabaseClient"; 
 
@@ -40,7 +41,7 @@ export default function Calendar() {
     setTimeout(() => setHighlightDate(null), 2000);
   };
 
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(false); 
   const [selectedDate, setSelectedDate] = useState("");
   const [editingEventId, setEditingEventId] = useState(null);
 
@@ -581,7 +582,7 @@ const fetchEventsRange = async (startDate, endDate) => {
                         type="time"
                         value={deadlineTime}
                         onChange={(e) => setDeadlineTime(e.target.value)}
-                        style={{ marginLeft: "8px" }}
+                        style={{ marginTop: "8px" }}
                       />
                     </div>
                   </div>
@@ -630,12 +631,24 @@ const fetchEventsRange = async (startDate, endDate) => {
           eventClick={handleEventClick}
           events={events}
           dayCellClassNames={(arg) => {
-            if (!highlightDate) return [];
-            const y = arg.date.getFullYear();
-            const m = String(arg.date.getMonth() + 1).padStart(2, "0");
-            const d = String(arg.date.getDate()).padStart(2, "0");
-            const ymd = `${y}-${m}-${d}`;
-            return ymd === highlightDate ? ["jump-highlight"] : [];
+            const classes = []; 
+
+            if (isHoliday(arg.date)) {
+              classes.push("holiday");
+            }
+
+            if (highlightDate) {
+              const y = arg.date.getFullYear();
+              const m = String(arg.date.getMonth() + 1).padStart(2, "0");
+              const d = String(arg.date.getDate()).padStart(2, "0");
+              const ymd = `${y}-${m}-${d}`;
+
+              if (ymd === highlightDate) {
+                classes.push("jump-highlight");
+              }
+            }
+
+            return classes; 
           }}
           eventContent={(arg) => {
             const creator = arg.event.extendedProps.creator;
