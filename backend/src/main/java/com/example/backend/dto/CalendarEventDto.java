@@ -6,5 +6,9 @@ public record CalendarEventDto(
         String start,
         String end,
         String authorUsername,
-        String memo) {
-}
+        String memo,
+        Boolean isSurvey,
+        String surveyContent,
+        String surveyOptions,
+        String deadline
+) {}

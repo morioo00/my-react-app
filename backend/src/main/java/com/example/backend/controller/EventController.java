@@ -15,6 +15,7 @@ import java.util.List;
 import com.example.backend.entity.User;
 
 import org.springframework.security.oauth2.jwt.Jwt;
+import com.example.backend.repository.SurveyAnswerRepository;
 
 @RestController
 @RequestMapping("/api/events")
@@ -23,11 +24,17 @@ public class EventController {
 
     private final EventRepository repo;
     private final UserRepository userRepository;
+    private final SurveyAnswerRepository surveyAnswerRepository;
 
-    public EventController(EventRepository repo, UserRepository userRepository) {
-        this.repo = repo;
-        this.userRepository = userRepository;
-    }
+    public EventController(
+        EventRepository repo,
+        UserRepository userRepository,
+        SurveyAnswerRepository surveyAnswerRepository) {
+
+    this.repo = repo;
+    this.userRepository = userRepository;
+    this.surveyAnswerRepository = surveyAnswerRepository;
+}
 
     // =========================
     // イベント作成
@@ -59,7 +66,11 @@ public class EventController {
                 saved.getMemo(),
                 saved.getStartAt(),
                 saved.getEndAt(),
-                saved.getAuthor() != null ? saved.getAuthor().getEmail() : null // ここ変更
+                saved.getAuthor() != null ? saved.getAuthor().getEmail() : null,
+                saved.getIsSurvey(),
+                saved.getSurveyContent(),
+                saved.getSurveyOptions(),
+                saved.getDeadline()
         );
     }
 
@@ -80,7 +91,12 @@ public class EventController {
                         e.getStartAt().toString(),
                         e.getEndAt().toString(),
                         e.getAuthor() != null ? e.getAuthor().getEmail() : null,
-                        e.getMemo()))
+                        e.getMemo(),
+                        e.getIsSurvey(),
+                        e.getSurveyContent(),
+                        e.getSurveyOptions(),
+                        e.getDeadline()!= null ? e.getDeadline().toString() : null
+                ))
                 .toList();
     }
 
@@ -102,7 +118,12 @@ public class EventController {
                         e.getStartAt().toString(),
                         e.getEndAt().toString(),
                         e.getAuthor() != null ? e.getAuthor().getEmail() : null,
-                        e.getMemo()))
+                        e.getMemo(),
+                        e.getIsSurvey(),
+                        e.getSurveyContent(),
+                        e.getSurveyOptions(),
+                        e.getDeadline()!= null ? e.getDeadline().toString() : null
+                ))
                 .toList();
     }
 
@@ -122,6 +143,11 @@ public class EventController {
         event.setStartAt(updatedEvent.getStartAt());
         event.setEndAt(updatedEvent.getEndAt());
 
+        event.setIsSurvey(updatedEvent.getIsSurvey());
+        event.setSurveyContent(updatedEvent.getSurveyContent());
+        event.setSurveyOptions(updatedEvent.getSurveyOptions());
+        event.setDeadline(updatedEvent.getDeadline());
+
         Event saved = repo.save(event);
 
         return new EventResponseDto(
@@ -130,7 +156,12 @@ public class EventController {
                 saved.getMemo(),
                 saved.getStartAt(),
                 saved.getEndAt(),
-                saved.getAuthor() != null ? saved.getAuthor().getEmail() : null);
+                saved.getAuthor() != null ? saved.getAuthor().getEmail() : null,
+                saved.getIsSurvey(),
+                saved.getSurveyContent(),
+                saved.getSurveyOptions(),
+                saved.getDeadline()
+        );
     }
 
     // =========================
@@ -144,4 +175,45 @@ public class EventController {
 
         repo.delete(event);
     }
+
+    @PostMapping("/{eventId}/answer")
+public void answer(
+        @PathVariable Long eventId,
+        @RequestBody java.util.Map<String, String> body,
+        Authentication auth) {
+
+    Jwt jwt = (Jwt) auth.getPrincipal();
+    String sub = jwt.getSubject();
+
+    User user = userRepository.findBySupabaseUserId(sub)
+            .orElseThrow();
+
+    Event event = repo.findById(eventId)
+            .orElseThrow();
+
+    String answerValue = body.get("answer");
+
+    // 既存回答チェック（あれば更新）
+    var answer = surveyAnswerRepository
+            .findByEventIdAndUserId(eventId, user.getId())
+            .orElse(new com.example.backend.entity.SurveyAnswer());
+
+    answer.setEvent(event);
+    answer.setUser(user);
+    answer.setAnswer(answerValue);
+
+    surveyAnswerRepository.save(answer);
+}
+
+@GetMapping("/{eventId}/answers")
+public List<java.util.Map<String, String>> getAnswers(@PathVariable Long eventId) {
+
+    return surveyAnswerRepository.findByEventId(eventId)
+            .stream()
+            .map(a -> java.util.Map.of(
+                    "email", a.getUser().getEmail(),
+                    "answer", a.getAnswer()
+            ))
+            .toList();
+}
 }

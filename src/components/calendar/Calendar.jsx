@@ -136,12 +136,12 @@ const fetchEventsRange = async (startDate, endDate) => {
         creator: dto.authorUsername,
         memo: dto.memo,
 
-        // 追加: フロント側用の初期値
-        reminder: "none",
-        isSurvey: false,
-        surveyContent: "",
-        surveyOptions: [],
-        deadline: null,
+        isSurvey: dto.isSurvey ?? false,
+        surveyContent: dto.surveyContent ?? "",
+        surveyOptions: dto.surveyOptions
+        ? JSON.parse(dto.surveyOptions)
+        : [],
+        deadline: dto.deadline,
       },
     }));
 
@@ -280,18 +280,25 @@ const fetchEventsRange = async (startDate, endDate) => {
         )}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 
       const payload = {
-        title: title.trim(),
-        memo: memo ?? "",
-        startAt: toLocalIso(start),
-        endAt: toLocalIso(end),
-      };
+    title: title.trim(),
+    memo: memo ?? "",
+    startAt: toLocalIso(start),
+    endAt: toLocalIso(end),
+    isSurvey,
+    surveyContent: isSurvey ? surveyContent : null,
+    surveyOptions: isSurvey ? JSON.stringify(surveyOptions) : null,
+    deadline: isSurvey && deadline ? deadline.toISOString() : null,
+  };
 
-      try {
-        const res = await authFetch(`http://localhost:8080/api/events/${editingEventId}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
+  try {
+    const res = await authFetch(
+      `http://localhost:8080/api/events/${editingEventId}`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }
+    );
 
         if (!res.ok) throw new Error("update failed");
 
@@ -340,13 +347,17 @@ const fetchEventsRange = async (startDate, endDate) => {
         memo: memo ?? "",
         startAt: toLocalIso(start),
         endAt: toLocalIso(end),
+        isSurvey,
+        surveyContent: isSurvey ? surveyContent : null,
+        surveyOptions: isSurvey ? JSON.stringify(surveyOptions) : null,
+        deadline: isSurvey && deadline ? deadline.toISOString() : null,
       };
 
       try {
         const res = await authFetch("http://localhost:8080/api/events", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
+          body: JSON.stringify({ answer: "参加する" }),
         });
 
         if (!res.ok) throw new Error("create failed");
@@ -366,7 +377,7 @@ const fetchEventsRange = async (startDate, endDate) => {
             reminder,
             isSurvey,
             surveyContent: isSurvey ? surveyContent : "",
-            surveyOptions: isSurvey ? surveyOptions : [],
+            surveyOptions: isSurvey ? JSON.stringify(surveyOptions) : null,
             deadline: isSurvey && deadline ? deadline.toISOString() : null,
           },
         };
