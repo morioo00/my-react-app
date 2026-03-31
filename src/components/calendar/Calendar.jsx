@@ -8,6 +8,7 @@ import mockSearcher from "./search/searchers/mockSearcher";
 import apiSearcher from "./search/searchers/apiSearcher";
 import authFetch from "../auth/authFetch";
 import { getToken } from "../auth/tokenStorage";
+import { isHoliday } from "./holidayUtils"; //祝日指定
 
 import { supabase } from "../../lib/supabaseClient"; 
 
@@ -40,7 +41,7 @@ export default function Calendar() {
     setTimeout(() => setHighlightDate(null), 2000);
   };
 
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(false); 
   const [selectedDate, setSelectedDate] = useState("");
   const [editingEventId, setEditingEventId] = useState(null);
 
@@ -521,36 +522,28 @@ const fetchEventsRange = async (startDate, endDate) => {
                 </select>
               </div>
 
-         {!editingEventId && (
-  <>
-    <div>
-      <label>
-        <input
-          type="checkbox"
-          checked={isSurvey}
-          onChange={(e) => setIsSurvey(e.target.checked)}
-        />
-        アンケートを作成する
-      </label>
-    </div>
-
-    {isSurvey && (
-      <div style={{ marginTop: "12px" }}>
-        <div>
-          <label>アンケート内容</label>
-          <textarea
-            value={surveyContent}
-            onChange={(e) => setSurveyContent(e.target.value)}
-            rows="3"
-          />
-        </div>
-      </div>
-    )}
-  </>
-)}
+<div>
+  <label>
+    <input
+      type="checkbox"
+      checked={isSurvey}
+      onChange={(e) => setIsSurvey(e.target.checked)}
+    />
+    {editingEventId ? "アンケートを表示する" : "アンケートを作成する"}
+  </label>
+</div>
 
 {isSurvey && (
   <div style={{ marginTop: "12px" }}>
+    <div>
+      <label>アンケート内容</label>
+      <textarea
+        value={surveyContent}
+        onChange={(e) => setSurveyContent(e.target.value)}
+        rows="3"
+      />
+    </div>
+
     <div>
       <label>回答項目</label>
       <div>
@@ -559,7 +552,6 @@ const fetchEventsRange = async (startDate, endDate) => {
             type="checkbox"
             checked={allowAttend}
             onChange={(e) => setAllowAttend(e.target.checked)}
-            disabled={editingEventId}
           />
           参加する
         </label>
@@ -569,7 +561,6 @@ const fetchEventsRange = async (startDate, endDate) => {
             type="checkbox"
             checked={allowAbsent}
             onChange={(e) => setAllowAbsent(e.target.checked)}
-            disabled={editingEventId}
           />
           参加しない
         </label>
@@ -583,14 +574,12 @@ const fetchEventsRange = async (startDate, endDate) => {
           type="date"
           value={deadlineDate}
           onChange={(e) => setDeadlineDate(e.target.value)}
-          disabled={editingEventId}
         />
         <input
           type="time"
           value={deadlineTime}
           onChange={(e) => setDeadlineTime(e.target.value)}
-          style={{ marginLeft: "8px" }}
-          disabled={editingEventId}
+          style={{ marginTop: "8px" }}
         />
       </div>
     </div>
@@ -639,12 +628,24 @@ const fetchEventsRange = async (startDate, endDate) => {
           eventClick={handleEventClick}
           events={events}
           dayCellClassNames={(arg) => {
-            if (!highlightDate) return [];
-            const y = arg.date.getFullYear();
-            const m = String(arg.date.getMonth() + 1).padStart(2, "0");
-            const d = String(arg.date.getDate()).padStart(2, "0");
-            const ymd = `${y}-${m}-${d}`;
-            return ymd === highlightDate ? ["jump-highlight"] : [];
+            const classes = []; 
+
+            if (isHoliday(arg.date)) {
+              classes.push("holiday");
+            }
+
+            if (highlightDate) {
+              const y = arg.date.getFullYear();
+              const m = String(arg.date.getMonth() + 1).padStart(2, "0");
+              const d = String(arg.date.getDate()).padStart(2, "0");
+              const ymd = `${y}-${m}-${d}`;
+
+              if (ymd === highlightDate) {
+                classes.push("jump-highlight");
+              }
+            }
+
+            return classes; 
           }}
           eventContent={(arg) => {
             const creator = arg.event.extendedProps.creator;
