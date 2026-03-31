@@ -10,25 +10,28 @@ public class SurveyAnswer {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String answer;
-
-    @ManyToOne(fetch = FetchType.LAZY)
+    // イベント
+    @ManyToOne
     @JoinColumn(name = "event_id")
     private Event event;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    // ユーザー
+    @ManyToOne
     @JoinColumn(name = "user_id")
     private User user;
 
-    // getter / setter
-    public Long getId() { return id; }
+    // 回答（参加する / 参加しない）
+    private String answer;
 
-    public String getAnswer() { return answer; }
-    public void setAnswer(String answer) { this.answer = answer; }
+    // ===== getter/setter =====
+    public Long getId() { return id; }
 
     public Event getEvent() { return event; }
     public void setEvent(Event event) { this.event = event; }
 
     public User getUser() { return user; }
     public void setUser(User user) { this.user = user; }
+
+    public String getAnswer() { return answer; }
+    public void setAnswer(String answer) { this.answer = answer; }
 }

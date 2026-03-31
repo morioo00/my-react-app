@@ -43,6 +43,25 @@ public class EventController {
     @PostMapping
     public EventResponseDto create(@RequestBody Event event, Authentication auth) {
 
+        System.out.println("===== CREATE DEBUG =====");
+    System.out.println("title=" + event.getTitle());
+    System.out.println("startAt=" + event.getStartAt());
+    System.out.println("endAt=" + event.getEndAt());
+    System.out.println("isSurvey=" + event.getIsSurvey());
+    System.out.println("surveyOptions=" + event.getSurveyOptions());
+    System.out.println("deadline=" + event.getDeadline());
+    System.out.println("===== DEBUG END =====");
+
+        if (event.getIsSurvey() == null) {
+    event.setIsSurvey(false);
+}
+
+if (!event.getIsSurvey()) {
+    event.setSurveyContent(null);
+    event.setSurveyOptions(null);
+    event.setDeadline(null);
+}
+
         Jwt jwt = (Jwt) auth.getPrincipal();
 
         String sub = jwt.getSubject(); // ここ追加
@@ -78,14 +97,38 @@ public class EventController {
     // イベント取得（カレンダー表示）
     // =========================
     @GetMapping
-    public List<CalendarEventDto> list(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
+public List<CalendarEventDto> list(
+        @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
+        @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to,
+        Authentication auth // ← 追加🔥
+) {
 
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to) {
+    Jwt jwt = (Jwt) auth.getPrincipal();
+    String sub = jwt.getSubject();
 
-        return repo.findByStartAtLessThanAndEndAtGreaterThan(to, from)
-                .stream()
-                .map(e -> new CalendarEventDto(
+    User user = userRepository.findBySupabaseUserId(sub).orElse(null);
+
+    return repo.findByStartAtLessThanAndEndAtGreaterThan(to, from)
+            .stream()
+            .map(e -> {
+
+                // 👇 回答数
+                Long attendCount = surveyAnswerRepository
+                        .countByEventIdAndAnswer(e.getId(), "参加する");
+
+                Long absentCount = surveyAnswerRepository
+                        .countByEventIdAndAnswer(e.getId(), "参加しない");
+
+                // 👇 自分の回答
+                String myAnswer = null;
+                if (user != null) {
+                    myAnswer = surveyAnswerRepository
+                            .findByEventIdAndUserId(e.getId(), user.getId())
+                            .map(a -> a.getAnswer())
+                            .orElse(null);
+                }
+
+                return new CalendarEventDto(
                         String.valueOf(e.getId()),
                         e.getTitle(),
                         e.getStartAt().toString(),
@@ -95,10 +138,15 @@ public class EventController {
                         e.getIsSurvey(),
                         e.getSurveyContent(),
                         e.getSurveyOptions(),
-                        e.getDeadline()!= null ? e.getDeadline().toString() : null
-                ))
-                .toList();
-    }
+                        e.getDeadline() != null ? e.getDeadline().toString() : null,
+
+                        attendCount,
+                        absentCount,
+                        myAnswer
+                );
+            })
+            .toList();
+}
 
     // =========================
     // イベント検索
@@ -122,7 +170,11 @@ public class EventController {
                         e.getIsSurvey(),
                         e.getSurveyContent(),
                         e.getSurveyOptions(),
-                        e.getDeadline()!= null ? e.getDeadline().toString() : null
+                        e.getDeadline() != null ? e.getDeadline().toString() : null,
+
+                        0L,     // ← 仮でOK（後で集計）
+                        0L,     // ← 仮でOK
+                        null    // ← 自分の回答
                 ))
                 .toList();
     }

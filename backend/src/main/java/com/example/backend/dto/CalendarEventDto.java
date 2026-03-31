@@ -10,5 +10,8 @@ public record CalendarEventDto(
         Boolean isSurvey,
         String surveyContent,
         String surveyOptions,
-        String deadline
+        String deadline,
+        Long attendCount,
+        Long absentCount,
+        String myAnswer
 ) {}
