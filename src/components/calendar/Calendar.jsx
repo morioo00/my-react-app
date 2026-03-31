@@ -86,8 +86,8 @@ export default function Calendar() {
   // ===== 追加: アンケート関連 =====
   const [isSurvey, setIsSurvey] = useState(false);
   const [surveyContent, setSurveyContent] = useState("");
-  const [allowAttend, setAllowAttend] = useState(true);
-  const [allowAbsent, setAllowAbsent] = useState(true);
+  const [allowAttend, setAllowAttend] = useState(false);
+  const [allowAbsent, setAllowAbsent] = useState(false);
   const [deadlineDate, setDeadlineDate] = useState("");
   const [deadlineTime, setDeadlineTime] = useState("23:59");
 
@@ -177,8 +177,8 @@ const fetchEventsRange = async (startDate, endDate) => {
     // 追加: 初期化
     setIsSurvey(false);
     setSurveyContent("");
-    setAllowAttend(true);
-    setAllowAbsent(true);
+    setAllowAttend(false);
+    setAllowAbsent(false);
     setDeadlineDate(dateStr);
     setDeadlineTime("23:59");
 
@@ -521,72 +521,81 @@ const fetchEventsRange = async (startDate, endDate) => {
                 </select>
               </div>
 
-              {/* 追加: アンケート作成チェック */}
-              <div>
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={isSurvey}
-                    onChange={(e) => setIsSurvey(e.target.checked)}
-                  />
-                  アンケートを作成する
-                </label>
-              </div>
+         {!editingEventId && (
+  <>
+    <div>
+      <label>
+        <input
+          type="checkbox"
+          checked={isSurvey}
+          onChange={(e) => setIsSurvey(e.target.checked)}
+        />
+        アンケートを作成する
+      </label>
+    </div>
 
-              {/* 追加: チェックが入っている時だけ表示 */}
-              {isSurvey && (
-                <div style={{ marginTop: "12px" }}>
-                  <div>
-                    <label>アンケート内容</label>
-                    <textarea
-                      value={surveyContent}
-                      onChange={(e) => setSurveyContent(e.target.value)}
-                      rows="3"
-                      placeholder="例: この会に参加しますか？"
-                    />
-                  </div>
+    {isSurvey && (
+      <div style={{ marginTop: "12px" }}>
+        <div>
+          <label>アンケート内容</label>
+          <textarea
+            value={surveyContent}
+            onChange={(e) => setSurveyContent(e.target.value)}
+            rows="3"
+          />
+        </div>
+      </div>
+    )}
+  </>
+)}
 
-                  <div style={{ marginTop: "10px" }}>
-                    <label>回答項目</label>
-                    <div>
-                      <label style={{ display: "block" }}>
-                        <input
-                          type="checkbox"
-                          checked={allowAttend}
-                          onChange={(e) => setAllowAttend(e.target.checked)}
-                        />
-                        参加する
-                      </label>
+{isSurvey && (
+  <div style={{ marginTop: "12px" }}>
+    <div>
+      <label>回答項目</label>
+      <div>
+        <label style={{ display: "block" }}>
+          <input
+            type="checkbox"
+            checked={allowAttend}
+            onChange={(e) => setAllowAttend(e.target.checked)}
+            disabled={editingEventId}
+          />
+          参加する
+        </label>
 
-                      <label style={{ display: "block", marginTop: "4px" }}>
-                        <input
-                          type="checkbox"
-                          checked={allowAbsent}
-                          onChange={(e) => setAllowAbsent(e.target.checked)}
-                        />
-                        参加しない
-                      </label>
-                    </div>
-                  </div>
+        <label style={{ display: "block", marginTop: "4px" }}>
+          <input
+            type="checkbox"
+            checked={allowAbsent}
+            onChange={(e) => setAllowAbsent(e.target.checked)}
+            disabled={editingEventId}
+          />
+          参加しない
+        </label>
+      </div>
+    </div>
 
-                  <div style={{ marginTop: "10px" }}>
-                    <label>回答締切</label>
-                    <div>
-                      <input
-                        type="date"
-                        value={deadlineDate}
-                        onChange={(e) => setDeadlineDate(e.target.value)}
-                      />
-                      <input
-                        type="time"
-                        value={deadlineTime}
-                        onChange={(e) => setDeadlineTime(e.target.value)}
-                        style={{ marginLeft: "8px" }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
+    <div style={{ marginTop: "10px" }}>
+      <label>回答締切</label>
+      <div>
+        <input
+          type="date"
+          value={deadlineDate}
+          onChange={(e) => setDeadlineDate(e.target.value)}
+          disabled={editingEventId}
+        />
+        <input
+          type="time"
+          value={deadlineTime}
+          onChange={(e) => setDeadlineTime(e.target.value)}
+          style={{ marginLeft: "8px" }}
+          disabled={editingEventId}
+        />
+      </div>
+    </div>
+  </div>
+)}
 
               <div style={{ marginTop: "15px" }}>
                 <button onClick={handleSave}>
