@@ -7,6 +7,7 @@ html, body, #root {
   height: 100vh;
   display: flex;
   flex-direction: column;
+  background: #f8fafc;
 }
 
 .calendar-area {
@@ -16,39 +17,161 @@ html, body, #root {
 }
 
 /* 画面全体を覆う黒背景 */
+/* Header control buttons */
+.calBtn {
+  height: 36px;
+  min-width: 52px;
+  border: 1px solid #d0d7de;
+  border-radius: 8px;
+  background: #fff;
+  color: #1f2937;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 0 12px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.calBtn:hover {
+  background: #f3f4f6;
+  border-color: #c4ccd4;
+}
+
+.calBtn:focus-visible {
+  outline: 2px solid #93c5fd;
+  outline-offset: 1px;
+}
+
 .modal-overlay {
   position: fixed;
   inset: 0; /* top:0 right:0 bottom:0 left:0 の省略 */
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(15, 23, 42, 0.32);
 
   display: flex;
-  justify-content: center; /* 横中央 */
-  align-items: center; /* 縦中央 */
-
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
   z-index: 9999;
 }
 
 /* モーダル本体 */
 .modal-box {
-  background: white;
-  width: 400px;
-  max-width: 90%;
-  padding: 24px;
+  background: #fff;
+  width: min(520px, 100%);
+  max-height: min(88vh, 760px);
+  overflow-y: auto;
+  padding: 22px;
   border-radius: 12px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 18px 46px rgba(15, 23, 42, 0.16);
+  animation: fadeIn 0.16s ease-out;
+}
 
-  animation: fadeIn 0.2s ease-out;
+.modal-box h3 {
+  margin: 0 0 16px;
+  font-size: 32px;
+  line-height: 1.2;
+  color: #1f2937;
+}
+
+.modal-box > div {
+  margin-bottom: 10px;
+}
+
+.modal-box label {
+  display: inline-block;
+  margin-bottom: 4px;
+  font-size: 15px;
+  color: #334155;
+}
+
+.modal-box input[type="text"],
+.modal-box input[type="time"],
+.modal-box input[type="date"],
+.modal-box select {
+  width: 100%;
+  box-sizing: border-box;
+  height: 44px; 
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 0 12px;
+  font-size: 14px;
+  color: #111827;
+  background: #fff;
+  vertical-align: middle;
+  line-height: normal; 
+}
+
+.modal-box textarea {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 100px; 
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 10px 12px; 
+  font-size: 14px;
+  color: #111827;
+  background: #fff;
+  resize: vertical;
+}
+
+.modal-box textarea {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 100px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+  line-height: 1.5; 
+  color: #111827;
+  background: #fff;
+  resize: vertical;
+}
+
+
+/* Chrome系の日付・時間入力の内部表示を揃えやすくする */
+.modal-box input[type="date"]::-webkit-datetime-edit,
+.modal-box input[type="time"]::-webkit-datetime-edit {
+  padding: 0;
+  line-height: normal;
+}
+.modal-box input[type="date"]::-webkit-date-and-time-value,
+.modal-box input[type="time"]::-webkit-date-and-time-value {
+  min-height: unset;
+  text-align: left;
+}
+
+/* Chrome系: アイコン位置 */
+.modal-box input[type="date"]::-webkit-calendar-picker-indicator,
+.modal-box input[type="time"]::-webkit-calendar-picker-indicator {
+  margin: 0;
+  cursor: pointer;
+}
+
+.modal-box input:focus,
+.modal-box textarea:focus,
+.modal-box select:focus {
+  outline: 2px solid #bfdbfe;
+  border-color: #93c5fd;
+}
+
+.modal-box input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  vertical-align: middle;
+  margin-right: 6px;
 }
 
 /* ふわっと表示アニメーション */
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: scale(0.95);
+    transform: translateY(4px) scale(0.99);
   }
   to {
     opacity: 1;
-    transform: scale(1);
+    transform: translateY(0) scale(1);
   }
 }
 
@@ -56,6 +179,24 @@ html, body, #root {
   background: rgba(255, 230, 0, 0.22) !important;
   transition: background 0.2s ease;
 }
+
+.fc {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.fc-theme-standard td,
+.fc-theme-standard th {
+  border-color: #e5e7eb;
+}
+
+.fc .fc-toolbar-title {
+  color: #0f172a;
+  font-weight: 700;
+}
+
 
 .fc-daygrid-event div {
   white-space: nowrap;

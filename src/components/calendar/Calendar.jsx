@@ -582,7 +582,7 @@ const fetchEventsRange = async (startDate, endDate) => {
                         type="time"
                         value={deadlineTime}
                         onChange={(e) => setDeadlineTime(e.target.value)}
-                        style={{ marginLeft: "8px" }}
+                        style={{ marginTop: "8px" }}
                       />
                     </div>
                   </div>
