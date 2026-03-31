@@ -56,3 +56,45 @@ html, body, #root {
   background: rgba(255, 230, 0, 0.22) !important;
   transition: background 0.2s ease;
 }
+
+.fc-daygrid-event div {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+
+.fc-daygrid-day-frame { /* スクロール可能にする */
+  height: 100%; 
+  display: flex;
+  flex-direction: column;
+}
+
+.fc-daygrid-day-events {
+  overflow-y: auto;   /* ← スクロール */
+  max-height: 80px;   /* ← 高さ制限 */
+}
+
+.fc-daygrid-day { /* 1マスの高さ固定 */
+  height: 120px; 
+}
+
+.fc-daygrid-day.holiday .fc-daygrid-day-number { /* 日曜日の「日付（数字）」を赤に */
+  color: red; 
+}
+
+.fc-col-header-cell.fc-day-sun .fc-col-header-cell-cushion { /* 日曜日のヘッダー（Sun）も赤に */
+  color: red;
+}
+
+.fc-day-sun .fc-daygrid-day-number { /* 日曜日の日付数字を赤に */
+  color: red;
+}
+
+.fc-daygrid-day.holiday { /* 祝日の背景色変更 */
+  background-color: #f8eaeb;
+}
+
+.fc-day-sun .fc-daygrid-day-frame { /* 日曜日の背景色変更 */
+  background-color: #f8eaeb; 
+}
