@@ -1,114 +1,73 @@
 .detailModalOverlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.45);
+  background: rgba(15, 23, 42, 0.38);
+  backdrop-filter: blur(4px);
   display: flex;
   justify-content: center;
   align-items: center;
+  padding: 20px;
   z-index: 10000;
 }
 
 .detailModal {
-  width: min(640px, 95%);
-  max-height: 80vh;
-  background: #fff;
-  border-radius: 12px;
+  width: min(760px, 95%);
+  max-height: 85vh;
+  background: #ffffff;
+  border-radius: 24px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  box-shadow:
+    0 24px 60px rgba(15, 23, 42, 0.18),
+    0 8px 24px rgba(15, 23, 42, 0.10);
 }
 
 .detailModalHeader {
   display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  padding: 16px;
-  border-bottom: 1px solid #eee;
+  grid-template-columns: 180px 1fr 48px; /* 左:操作 / 中央:タイトル / 右:閉じる */
+  align-items: start;
+  column-gap: 16px;
+  padding: 22px 20px 18px;
+  border-bottom: 1px solid #e5e7eb;
+  background: linear-gradient(to bottom, #ffffff, #fbfdff);
 }
 
-.detailModalClose {
-  border: none;
-  background: transparent;
-  font-size: 18px;
-  cursor: pointer;
-}
-
-.detailModalBody {
-  padding: 16px;
-  overflow-y: auto; /* モーダル内スクロール */
-}
-
-.detailRow {
-  margin-bottom: 14px;
-}
-
-.detailLabel {
-  font-size: 12px;
-  color: #666;
-  margin-bottom: 6px;
-}
-
-.detailValue {
-  font-size: 14px;
-  color: #222;
-}
-
-.detailMemo {
-  white-space: pre-wrap;
-  line-height: 1.6;
-  font-size: 14px;
-  color: #333;
-}
-
-.detailBackBtn {
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  font-size: 14px;
-  color: #333;
-  margin-right: 8px;
-}
-
-.detailBackBtn:hover {
-  text-decoration: underline;
+.detailHeaderLeft {
+  display: flex; /* ここ追加 */
+  flex-direction: column; /* ここ追加 */
+  align-items: flex-start; /* ここ追加 */
+  gap: 10px; /* ここ追加 */
 }
 
 .detailModalTitle {
   justify-self: center;
+  align-self: center;
   text-align: center;
-  font-weight: bold;
-  font-size: 16px;
+  font-weight: 800;
+  font-size: 22px;
+  line-height: 1.4;
+  color: #1e293b;
+  margin-top: 2px;
 
-  /* 長いタイトル対策 */
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   max-width: 100%;
 }
 
-/* 右の×を右端に */
-.detailModalClose {
-  justify-self: end;
-}
-.detailBackBtn {
-  min-width: 72px; /* 好みで調整 */
-  text-align: left;
-}
-.detailModalClose {
-  min-width: 72px; /* 好みで調整 */
-  text-align: right;
-}
-
-.detailBackBtn {
-  border: none;
-  background: transparent;
+.detailJumpBtn {
+  padding: 0.6em 1.2em;           /* ここ変更 */
+  font-size: 1em;                 /* ここ変更 */
+  font-weight: 500;               /* ここ変更 */
+  font-family: inherit;           /* ここ追加 */
+  color: #000;                    /* ここ追加 */
+  background-color: #bdbdbd;      /* ここ変更 */
+  border: 1px solid transparent;  /* ここ変更 */
+  border-radius: 8px;             /* ここ変更 */
   cursor: pointer;
-  font-size: 14px;
-  color: #333;
-
-  display: inline-flex;
-  align-items: center;
-  gap: 15px; /* ← ここで隙間調整 */
+  box-shadow: none;               /* ここ変更 */
+  transform: none;                /* ここ追加 */
 }
 
 .detailBackBtn,
@@ -116,31 +75,172 @@
   border: none;
   background: transparent;
   cursor: pointer;
-  font-size: 14px;
-  color: #333;
-
+  color: #bdbdbd;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-
-  padding: 6px 10px;
-  border-radius: 8px;
-  transition: background 0.15s ease;
+  border-radius: 10px;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    opacity 0.15s ease,
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .detailBackBtn {
+  padding: 6px 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #334155;
   gap: 6px;
-  opacity: 1;
+}
+
+.detailBackBtn:active {
+  transform: scale(0.98);
+}
+
+.detailBackIcon {
+  display: inline-block; /* ここ追加 */
+  font-size: 15px; /* ここ追加 */
+  line-height: 1; /* ここ追加 */
+}
+
+.detailJumpBtn {
+  padding: 12px 18px;
+  font-size: 14px;
+  font-weight: 700;
+  background: #bdbdbd;
+  box-shadow: 0 6px 14px rgba(100, 116, 139, 0.22);
+}
+
+.detailJumpBtn:hover {
+  background-color: #bdbdbd;
+  border-color: #646cff;  
+  box-shadow: none; 
+  transform: none;   
+}
+
+.detailJumpBtn:active {
+  transform: none;  
 }
 
 .detailModalClose {
-  font-size: 16px;
-  padding: 6px 8px;
+  width: 40px;
+  height: 40px;
+  justify-self: end;
+  align-self: start;
+  font-size: 24px;
   opacity: 0.7;
 }
 
-.detailBackBtn:hover,
 .detailModalClose:hover {
-  background: rgba(0, 0, 0, 0.06);
+  background: rgba(15, 23, 42, 0.06);
+  color: #0f172a;
   opacity: 1;
+}
+
+.detailModalClose:active {
+  transform: scale(0.98);
+}
+
+.detailModalBody {
+  padding: 24px 20px 24px;
+  overflow-y: auto;
+  background: #ffffff;
+  display: flex; /* ここ追加 */
+  flex-direction: column; /* ここ追加 */
+  gap: 16px; /* ここ追加 */
+}
+
+.detailRow {
+  margin-bottom: 0;
+  padding: 18px 18px;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  background: #f8fafc;
+}
+
+.detailLabel {
+  font-size: 13px;
+  font-weight: 700;
+  color: #64748b;
+  margin-bottom: 10px;
+  letter-spacing: 0.02em;
+}
+
+.detailValue {
+  font-size: 16px;
+  color: #0f172a;
+  line-height: 1.7;
+  word-break: break-word;
+}
+
+.detailMemo {
+  white-space: pre-wrap;
+  line-height: 1.8;
+  font-size: 16px;
+  color: #1f2937;
+  word-break: break-word;
+}
+
+/* スマホ対応 */
+@media (max-width: 640px) {
+  .detailModalOverlay {
+    padding: 12px;
+  }
+
+  .detailModal {
+    width: 100%;
+    max-height: 90vh;
+    border-radius: 18px;
+  }
+
+  .detailModalHeader {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "left close"
+      "title title";
+    row-gap: 12px;
+    padding: 16px 14px 14px;
+  }
+
+  .detailHeaderLeft {
+    grid-area: left;
+    gap: 8px;
+  }
+
+  .detailModalTitle {
+    grid-area: title;
+    font-size: 18px;
+    white-space: normal;
+  }
+
+  .detailModalClose {
+    grid-area: close;
+    justify-self: end;
+  }
+
+  .detailJumpBtn {
+    width: 100%;
+  }
+
+  .detailModalBody {
+    padding: 16px 14px 18px;
+    gap: 12px;
+  }
+
+  .detailRow {
+    padding: 14px 14px;
+    border-radius: 14px;
+  }
+
+  .detailLabel {
+    font-size: 12px;
+  }
+
+  .detailValue,
+  .detailMemo {
+    font-size: 14px;
+  }
 }
