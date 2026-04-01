@@ -46,6 +46,7 @@ export default function Calendar() {
   const [editingEventId, setEditingEventId] = useState(null);
 
   const [creator, setCreator] = useState("");
+  const [currentUserEmail, setCurrentUserEmail] = useState("");
   const [title, setTitle] = useState("");
   const [memo, setMemo] = useState("");
   const [startTime, setStartTime] = useState("09:00");
@@ -62,7 +63,8 @@ export default function Calendar() {
         }
 
         const email = data?.user?.email || "";
-        setCreator(email); // ここ追加
+        setCreator(email);
+        setCurrentUserEmail(email); 
       } catch (e) {
         console.error("fetchLoggedInUser unexpected error:", e);
       }
@@ -168,6 +170,7 @@ const fetchEventsRange = async (startDate, endDate) => {
   const openModalForDate = (dateStr) => {
     setEditingEventId(null);
     setSelectedDate(dateStr);
+    setCreator(currentUserEmail);
 
     setTitle("");
     setMemo("");
@@ -459,13 +462,9 @@ const fetchEventsRange = async (startDate, endDate) => {
               <h3>{editingEventId ? "予定編集" : `${selectedDate} の予定追加`}</h3>
 
               {/* 作成者 */}
-              <div>
-                <label>作成者</label>
-                <input
-                  type="text"
-                  value={creator}
-                  readOnly // ← ここ追加（編集不可）
-                />
+              <div className="creator-row">
+                <span className="creator-label">作成者：</span>
+                <span className="creator-value">{creator || "未ログイン"}</span>
               </div>
 
               {/* タイトル */}

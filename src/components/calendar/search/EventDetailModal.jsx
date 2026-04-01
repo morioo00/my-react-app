@@ -15,6 +15,7 @@ export default function EventDetailModal({
     const handleKey = (e) => {
       if (e.key === "Escape") onCloseAll();
     };
+
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
   }, [open, onCloseAll]);
@@ -23,6 +24,7 @@ export default function EventDetailModal({
   useEffect(() => {
     if (open) document.body.style.overflow = "hidden";
     else document.body.style.overflow = "";
+
     return () => {
       document.body.style.overflow = "";
     };
@@ -34,10 +36,26 @@ export default function EventDetailModal({
     <div className="detailModalOverlay" onClick={onCloseAll}>
       <div className="detailModal" onClick={(e) => e.stopPropagation()}>
         <div className="detailModalHeader">
-          <button className="detailBackBtn" type="button" onClick={onClose}>
-            <span className="detailBackIcon">←</span>
-            <span>一覧へ</span>
-          </button>
+          {/* ここ変更: 左側操作を1グループにまとめる */}
+          <div className="detailHeaderLeft">
+            <button className="detailBackBtn" type="button" onClick={onClose}>
+              <span className="detailBackIcon">←</span>
+              <span>一覧へ</span>
+            </button>
+
+            <button
+              className="detailJumpBtn" // ここ追加
+              type="button"
+              onClick={() => {
+                const start = event?.start ?? event?.startAt;
+                if (!start) return;
+                onJumpToDate?.(start);
+                onCloseAll?.();
+              }}
+            >
+              該当の投稿へ
+            </button>
+          </div>
 
           <div className="detailModalTitle">{event.title}</div>
 
@@ -48,19 +66,6 @@ export default function EventDetailModal({
           >
             ✕
           </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              const start = event?.start ?? event?.startAt;
-              if (!start) return;
-              onJumpToDate?.(start);
-              onCloseAll?.(); // 検索モーダルも閉じたいなら
-            }}
-          >
-            カレンダーへ
-          </button>
-
         </div>
 
         <div className="detailModalBody">

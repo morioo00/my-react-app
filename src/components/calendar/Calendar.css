@@ -176,7 +176,7 @@ html, body, #root {
 }
 
 .jump-highlight {
-  background: rgba(255, 230, 0, 0.22) !important;
+  background: rgba(60, 240, 50, 0.22) !important;
   transition: background 0.2s ease;
 }
 
@@ -238,4 +238,18 @@ html, body, #root {
 
 .fc-day-sun .fc-daygrid-day-frame { /* 日曜日の背景色変更 */
   background-color: #f8eaeb; 
+}
+
+.creator-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-size: 15px;
+  color: #334155;
+}
+
+.creator-label {
+  font-weight: 600;
+  white-space: nowrap;
 }
