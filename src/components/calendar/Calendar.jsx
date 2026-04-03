@@ -89,8 +89,8 @@ export default function Calendar() {
   // ===== 追加: アンケート関連 =====
   const [isSurvey, setIsSurvey] = useState(false);
   const [surveyContent, setSurveyContent] = useState("");
-  const [allowAttend, setAllowAttend] = useState(false);
-  const [allowAbsent, setAllowAbsent] = useState(false);
+  const [allowAttend, setAllowAttend] = useState(false); // ここ変更：初期値は未選択
+  const [allowAbsent, setAllowAbsent] = useState(false); // ここ既存：初期値は未選択
   const [deadlineDate, setDeadlineDate] = useState("");
   const [deadlineTime, setDeadlineTime] = useState("23:59");
   const [responses, setResponses] = useState({
@@ -124,7 +124,9 @@ export default function Calendar() {
 
     try {
       const res = await authFetch(
-        `http://localhost:8080/api/events?from=${encodeURIComponent(fromISO)}&to=${encodeURIComponent(toISO)}`,
+        `http://localhost:8080/api/events?from=${encodeURIComponent(
+          fromISO
+        )}&to=${encodeURIComponent(toISO)}`
       );
       console.log("events fetch response", res);
 
@@ -182,11 +184,11 @@ export default function Calendar() {
     setEndTime("10:00");
     setReminder("none");
 
-    // 追加: 初期化
+    // ここ変更：初期化時は両方未選択
     setIsSurvey(false);
     setSurveyContent("");
-    setAllowAttend(false);
-    setAllowAbsent(false);
+    setAllowAttend(false); // ここ変更
+    setAllowAbsent(false); // ここ変更
     setDeadlineDate(dateStr);
     setDeadlineTime("23:59");
 
@@ -215,8 +217,13 @@ export default function Calendar() {
     setSurveyContent(event.extendedProps.surveyContent || "");
 
     const options = event.extendedProps.surveyOptions || [];
-    setAllowAttend(options.includes("参加する"));
-    setAllowAbsent(options.includes("参加しない"));
+    if (options.length === 0) {
+      setAllowAttend(false); // ここ変更：空なら両方未選択
+      setAllowAbsent(false); // ここ変更：空なら両方未選択
+    } else {
+      setAllowAttend(options.includes("参加する"));
+      setAllowAbsent(options.includes("参加しない"));
+    }
 
     if (event.extendedProps.deadline) {
       const d = new Date(event.extendedProps.deadline);
@@ -257,12 +264,17 @@ export default function Calendar() {
         return;
       }
 
-      if (allowAttend) surveyOptions.push("参加する");
-      if (allowAbsent) surveyOptions.push("参加しない");
-
-      if (surveyOptions.length === 0) {
-        alert("参加する / 参加しない の少なくともどちらかを選んでください");
+      // ここ変更：どちらも未選択なら保存不可
+      if (!allowAttend && !allowAbsent) {
+        alert("参加する / 参加しない のどちらかを選んでください");
         return;
+      }
+
+      // ここ変更：片方だけ配列に入れる
+      if (allowAttend) {
+        surveyOptions = ["参加する"];
+      } else if (allowAbsent) {
+        surveyOptions = ["参加しない"];
       }
 
       if (!deadlineDate) {
@@ -425,7 +437,12 @@ export default function Calendar() {
 
     const endDate = new Date(`${highlightDate}T00:00:00`);
     endDate.setDate(endDate.getDate() + 1);
-    const end = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, "0")}-${String(endDate.getDate()).padStart(2, "0")}T00:00:00`;
+    const end = `${endDate.getFullYear()}-${String(
+      endDate.getMonth() + 1
+    ).padStart(2, "0")}-${String(endDate.getDate()).padStart(
+      2,
+      "0"
+    )}T00:00:00`;
 
     const highlightBg = {
       id: "__highlight__",
@@ -534,7 +551,10 @@ export default function Calendar() {
                   <input
                     type="checkbox"
                     checked={isSurvey}
-                    onChange={(e) => setIsSurvey(e.target.checked)}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setIsSurvey(checked); // ここ変更：自動で参加するを入れない
+                    }}
                   />
                   {editingEventId
                     ? "アンケートを表示する"
@@ -759,7 +779,7 @@ export default function Calendar() {
           datesSet={handleDatesSet}
           dateClick={handleDateClick}
           eventClick={handleEventClick}
-          events={events}
+          events={viewEvents} // ここ変更：ハイライト込みの配列を使う
           dayCellClassNames={(arg) => {
             const classes = [];
 
