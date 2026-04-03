@@ -16,6 +16,7 @@ import com.example.backend.entity.User;
 
 import org.springframework.security.oauth2.jwt.Jwt;
 import com.example.backend.repository.SurveyAnswerRepository;
+import com.example.backend.dto.AttendeeDto;
 
 @RestController
 @RequestMapping("/api/events")
@@ -257,15 +258,28 @@ public void answer(
     surveyAnswerRepository.save(answer);
 }
 
-@GetMapping("/{eventId}/answers")
-public List<java.util.Map<String, String>> getAnswers(@PathVariable Long eventId) {
+@GetMapping("/{eventId}/attendees")
+public List<AttendeeDto> getAttendees(@PathVariable Long eventId) {
 
-    return surveyAnswerRepository.findByEventId(eventId)
-            .stream()
-            .map(a -> java.util.Map.of(
-                    "email", a.getUser().getEmail(),
-                    "answer", a.getAnswer()
-            ))
-            .toList();
+    List<User> users = userRepository.findAll();
+
+    return users.stream().map(user -> {
+
+        var answer = surveyAnswerRepository
+                .findByEventIdAndUserId(eventId, user.getId())
+                .orElse(null);
+
+        return new AttendeeDto(
+                user.getEmail(),
+                answer != null ? convertStatus(answer.getAnswer()) : "NO_RESPONSE",
+                answer != null ? answer.getAnswer() : null
+        );
+    }).toList();
+}
+
+private String convertStatus(String answer) {
+    if ("参加する".equals(answer)) return "ATTEND";
+    if ("参加しない".equals(answer)) return "ABSENT";
+    return "UNKNOWN";
 }
 }

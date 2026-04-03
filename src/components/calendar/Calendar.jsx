@@ -51,6 +51,7 @@ export default function Calendar() {
   const [memo, setMemo] = useState("");
   const [startTime, setStartTime] = useState("09:00");
   const [endTime, setEndTime] = useState("10:00");
+  const [myAnswer, setMyAnswer] = useState("");
 
     useEffect(() => {
     const fetchLoggedInUser = async () => {
@@ -421,6 +422,29 @@ const fetchEventsRange = async (startDate, endDate) => {
     }
   };
 
+
+  // ===== 回答送信 ===== ← ★これ追加
+const handleAnswer = async (answer) => {
+  try {
+    const res = await authFetch(
+      `http://localhost:8080/api/events/${editingEventId}/answer`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ answer }),
+      }
+    );
+
+    if (!res.ok) throw new Error("answer failed");
+
+    alert("回答しました");
+
+  } catch (e) {
+    console.error(e);
+    alert("回答に失敗しました");
+  }
+};
+
   // ===== ハイライト表示用：eventsに背景イベントを混ぜる =====
   const viewEvents = useMemo(() => {
     if (!highlightDate) return events;
@@ -545,6 +569,7 @@ const fetchEventsRange = async (startDate, endDate) => {
 
 {isSurvey && (
   <div style={{ marginTop: "12px" }}>
+    {/* アンケート内容 */}
     <div>
       <label>アンケート内容</label>
       <textarea
@@ -554,6 +579,7 @@ const fetchEventsRange = async (startDate, endDate) => {
       />
     </div>
 
+    {/* 回答項目（作成用） */}
     <div>
       <label>回答項目</label>
       <div>
@@ -577,6 +603,7 @@ const fetchEventsRange = async (startDate, endDate) => {
       </div>
     </div>
 
+    {/* 締切 */}
     <div style={{ marginTop: "10px" }}>
       <label>回答締切</label>
       <div>
@@ -593,6 +620,26 @@ const fetchEventsRange = async (startDate, endDate) => {
         />
       </div>
     </div>
+
+    {/* ★ここから追加（回答ボタン） */}
+    {editingEventId && (
+      <div style={{ marginTop: "12px" }}>
+        <label>回答する</label>
+
+        <div style={{ marginTop: "6px" }}>
+          <button onClick={() => handleAnswer("参加する")}>
+            参加する
+          </button>
+
+          <button
+            onClick={() => handleAnswer("参加しない")}
+            style={{ marginLeft: "10px" }}
+          >
+            参加しない
+          </button>
+        </div>
+      </div>
+    )}
   </div>
 )}
 
