@@ -10,7 +10,7 @@ import authFetch from "../auth/authFetch";
 import { getToken } from "../auth/tokenStorage";
 import { isHoliday } from "./holidayUtils"; //祝日指定
 
-import { supabase } from "../../lib/supabaseClient"; 
+import { supabase } from "../../lib/supabaseClient";
 
 function toDate(dateStr, timeStr) {
   const t = timeStr?.trim() ? timeStr.trim() : "00:00";
@@ -41,7 +41,7 @@ export default function Calendar() {
     setTimeout(() => setHighlightDate(null), 2000);
   };
 
-  const [open, setOpen] = useState(false); 
+  const [open, setOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState("");
   const [editingEventId, setEditingEventId] = useState(null);
 
@@ -52,7 +52,7 @@ export default function Calendar() {
   const [startTime, setStartTime] = useState("09:00");
   const [endTime, setEndTime] = useState("10:00");
 
-    useEffect(() => {
+  useEffect(() => {
     const fetchLoggedInUser = async () => {
       try {
         const { data, error } = await supabase.auth.getUser();
@@ -64,7 +64,7 @@ export default function Calendar() {
 
         const email = data?.user?.email || "";
         setCreator(email);
-        setCurrentUserEmail(email); 
+        setCurrentUserEmail(email);
       } catch (e) {
         console.error("fetchLoggedInUser unexpected error:", e);
       }
@@ -81,7 +81,7 @@ export default function Calendar() {
       { value: "30m", label: "30分前" },
       { value: "60m", label: "1時間前" },
     ],
-    []
+    [],
   );
 
   const [reminder, setReminder] = useState("none");
@@ -93,6 +93,10 @@ export default function Calendar() {
   const [allowAbsent, setAllowAbsent] = useState(false);
   const [deadlineDate, setDeadlineDate] = useState("");
   const [deadlineTime, setDeadlineTime] = useState("23:59");
+  const [responses, setResponses] = useState({
+    attend: [],
+    absent: [],
+  });
 
   const [events, setEvents] = useState([]);
 
@@ -104,7 +108,7 @@ export default function Calendar() {
   const pad = (n) => String(n).padStart(2, "0");
   const toLocalIsoSec = (d) =>
     `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
-      d.getHours()
+      d.getHours(),
     )}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 
   const getThisMonthRange = () => {
@@ -114,45 +118,45 @@ export default function Calendar() {
     return { start, end };
   };
 
-const fetchEventsRange = async (startDate, endDate) => {
-  const fromISO = startDate.toISOString();
-  const toISO = endDate.toISOString();
+  const fetchEventsRange = async (startDate, endDate) => {
+    const fromISO = startDate.toISOString();
+    const toISO = endDate.toISOString();
 
-  try {
-    const res = await authFetch(
-      `http://localhost:8080/api/events?from=${encodeURIComponent(fromISO)}&to=${encodeURIComponent(toISO)}`
-    );
-    console.log("events fetch response", res);
+    try {
+      const res = await authFetch(
+        `http://localhost:8080/api/events?from=${encodeURIComponent(fromISO)}&to=${encodeURIComponent(toISO)}`,
+      );
+      console.log("events fetch response", res);
 
-    if (!res.ok) {
-      throw new Error(`GET /api/events failed: ${res.status}`);
+      if (!res.ok) {
+        throw new Error(`GET /api/events failed: ${res.status}`);
+      }
+
+      const dtos = await res.json();
+      const mapped = dtos.map((dto) => ({
+        id: String(dto.id),
+        title: dto.title,
+        start: dto.startAt ?? dto.start,
+        end: dto.endAt ?? dto.end,
+        extendedProps: {
+          creator: dto.authorUsername,
+          memo: dto.memo,
+
+          // 追加: フロント側用の初期値
+          reminder: "none",
+          isSurvey: false,
+          surveyContent: "",
+          surveyOptions: [],
+          deadline: null,
+        },
+      }));
+
+      setEvents(mapped);
+    } catch (e) {
+      console.error(e);
+      alert("イベント取得に失敗しました: " + e.message);
     }
-
-    const dtos = await res.json();
-    const mapped = dtos.map((dto) => ({
-      id: String(dto.id),
-      title: dto.title,
-      start: dto.startAt ?? dto.start,
-      end: dto.endAt ?? dto.end,
-      extendedProps: {
-        creator: dto.authorUsername,
-        memo: dto.memo,
-
-        // 追加: フロント側用の初期値
-        reminder: "none",
-        isSurvey: false,
-        surveyContent: "",
-        surveyOptions: [],
-        deadline: null,
-      },
-    }));
-
-    setEvents(mapped);
-  } catch (e) {
-    console.error(e);
-    alert("イベント取得に失敗しました: " + e.message);
-  }
-};
+  };
 
   // 月移動・表示範囲変更のたびに：タイトル更新＋その範囲をDBから再取得
   const handleDatesSet = async (arg) => {
@@ -279,7 +283,7 @@ const fetchEventsRange = async (startDate, endDate) => {
 
       const toLocalIso = (d) =>
         `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(
-          d.getDate()
+          d.getDate(),
         )}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 
       const payload = {
@@ -290,11 +294,14 @@ const fetchEventsRange = async (startDate, endDate) => {
       };
 
       try {
-        const res = await authFetch(`http://localhost:8080/api/events/${editingEventId}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
+        const res = await authFetch(
+          `http://localhost:8080/api/events/${editingEventId}`,
+          {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          },
+        );
 
         if (!res.ok) throw new Error("update failed");
 
@@ -319,7 +326,7 @@ const fetchEventsRange = async (startDate, endDate) => {
         };
 
         setEvents((prev) =>
-          prev.map((e) => (e.id === editingEventId ? updatedEvent : e))
+          prev.map((e) => (e.id === editingEventId ? updatedEvent : e)),
         );
 
         setOpen(false);
@@ -329,13 +336,12 @@ const fetchEventsRange = async (startDate, endDate) => {
         alert("更新に失敗しました");
         return;
       }
-    }
-    else {
+    } else {
       const pad = (n) => String(n).padStart(2, "0");
 
       const toLocalIso = (d) =>
         `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(
-          d.getDate()
+          d.getDate(),
         )}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 
       const payload = {
@@ -393,15 +399,16 @@ const fetchEventsRange = async (startDate, endDate) => {
     if (!confirm("この予定を削除しますか？")) return;
 
     try {
-      const res = await authFetch(`http://localhost:8080/api/events/${editingEventId}`, {
-        method: "DELETE",
-      });
+      const res = await authFetch(
+        `http://localhost:8080/api/events/${editingEventId}`,
+        {
+          method: "DELETE",
+        },
+      );
 
       if (!res.ok) throw new Error("delete failed");
 
-      setEvents((prev) =>
-        prev.filter((e) => e.id !== editingEventId)
-      );
+      setEvents((prev) => prev.filter((e) => e.id !== editingEventId));
 
       setOpen(false);
     } catch (e) {
@@ -432,10 +439,9 @@ const fetchEventsRange = async (startDate, endDate) => {
   }, [events, highlightDate]);
 
   return (
-
     <div className="app-container notranslate" translate="no">
       {/* PC上の日本語/英語翻訳対策 */}
-      
+
       <div className="calendar-area">
         <CalendarSearchPanel
           title={viewTitle || "Calendar"}
@@ -459,7 +465,9 @@ const fetchEventsRange = async (startDate, endDate) => {
         {open && (
           <div className="modal-overlay" onClick={() => setOpen(false)}>
             <div className="modal-box" onClick={(e) => e.stopPropagation()}>
-              <h3>{editingEventId ? "予定編集" : `${selectedDate} の予定追加`}</h3>
+              <h3>
+                {editingEventId ? "予定編集" : `${selectedDate} の予定追加`}
+              </h3>
 
               {/* 作成者 */}
               <div className="creator-row">
@@ -521,69 +529,195 @@ const fetchEventsRange = async (startDate, endDate) => {
                 </select>
               </div>
 
-<div>
-  <label>
-    <input
-      type="checkbox"
-      checked={isSurvey}
-      onChange={(e) => setIsSurvey(e.target.checked)}
-    />
-    {editingEventId ? "アンケートを表示する" : "アンケートを作成する"}
-  </label>
-</div>
+              <div>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={isSurvey}
+                    onChange={(e) => setIsSurvey(e.target.checked)}
+                  />
+                  {editingEventId
+                    ? "アンケートを表示する"
+                    : "アンケートを作成する"}
+                </label>
+              </div>
 
-{isSurvey && (
-  <div style={{ marginTop: "12px" }}>
-    <div>
-      <label>アンケート内容</label>
-      <textarea
-        value={surveyContent}
-        onChange={(e) => setSurveyContent(e.target.value)}
-        rows="3"
-      />
-    </div>
+              {isSurvey && (
+                <div style={{ marginTop: "12px" }}>
+                  <div>
+                    <label>アンケート内容</label>
+                    <textarea
+                      value={surveyContent}
+                      onChange={(e) => setSurveyContent(e.target.value)}
+                      rows="3"
+                    />
+                  </div>
 
-    <div>
-      <label>回答項目</label>
-      <div>
-        <label style={{ display: "block" }}>
-          <input
-            type="checkbox"
-            checked={allowAttend}
-            onChange={(e) => setAllowAttend(e.target.checked)}
-          />
-          参加する
-        </label>
+                  <div>
+                    <label>回答項目</label>
+                    <div>
+                      <label style={{ display: "block" }}>
+                        <input
+                          type="checkbox"
+                          checked={allowAttend}
+                          onChange={(e) => {
+                            const checked = e.target.checked;
+                            setAllowAttend(checked);
 
-        <label style={{ display: "block", marginTop: "4px" }}>
-          <input
-            type="checkbox"
-            checked={allowAbsent}
-            onChange={(e) => setAllowAbsent(e.target.checked)}
-          />
-          参加しない
-        </label>
-      </div>
-    </div>
+                            setResponses((prev) => {
+                              const nextAttend = checked
+                                ? [
+                                    ...prev.attend.filter(
+                                      (name) => name !== currentUserEmail,
+                                    ),
+                                    currentUserEmail,
+                                  ]
+                                : prev.attend.filter(
+                                    (name) => name !== currentUserEmail,
+                                  );
 
-    <div style={{ marginTop: "10px" }}>
-      <label>回答締切</label>
-      <div>
-        <input
-          type="date"
-          value={deadlineDate}
-          onChange={(e) => setDeadlineDate(e.target.value)}
-        />
-        <input
-          type="time"
-          value={deadlineTime}
-          onChange={(e) => setDeadlineTime(e.target.value)}
-          style={{ marginTop: "8px" }}
-        />
-      </div>
-    </div>
-  </div>
-)}
+                              const nextAbsent = prev.absent.filter(
+                                (name) => name !== currentUserEmail,
+                              );
+
+                              return {
+                                attend: nextAttend,
+                                absent: nextAbsent,
+                              };
+                            });
+                          }}
+                        />
+                        参加する
+                      </label>
+
+                      <label style={{ display: "block", marginTop: "4px" }}>
+                        <input
+                          type="checkbox"
+                          checked={allowAbsent}
+                          onChange={(e) => {
+                            const checked = e.target.checked;
+                            setAllowAbsent(checked);
+
+                            setResponses((prev) => {
+                              const nextAbsent = checked
+                                ? [
+                                    ...prev.absent.filter(
+                                      (name) => name !== currentUserEmail,
+                                    ),
+                                    currentUserEmail,
+                                  ]
+                                : prev.absent.filter(
+                                    (name) => name !== currentUserEmail,
+                                  );
+
+                              const nextAttend = prev.attend.filter(
+                                (name) => name !== currentUserEmail,
+                              );
+
+                              return {
+                                attend: nextAttend,
+                                absent: nextAbsent,
+                              };
+                            });
+                          }}
+                        />
+                        参加しない
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* 回答者一覧（編集不可） */}
+                  <div
+                    style={{
+                      marginTop: "10px",
+                      border: "1px solid #ddd",
+                      padding: "10px",
+                      borderRadius: "6px",
+                    }}
+                  >
+                    <div style={{ fontWeight: "bold" }}>回答者一覧</div>
+
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: "24px",
+                        marginTop: "10px",
+                      }}
+                    >
+                      <div
+                        style={{
+                          flex: 1,
+                          paddingRight: "12px",
+                          borderRight: "1px solid #ddd",
+                        }}
+                      >
+                        <div>
+                          <strong>参加する</strong>
+                        </div>
+                        <div style={{ marginTop: "6px" }}>
+                          {responses.attend.length > 0
+                            ? responses.attend.map((name, index) => (
+                                <div
+                                  key={index}
+                                  style={{
+                                    whiteSpace: "nowrap",
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                  }}
+                                >
+                                  {name}
+                                </div>
+                              ))
+                            : "なし"}
+                        </div>
+                      </div>
+
+                      <div
+                        style={{
+                          flex: 1,
+                        }}
+                      >
+                        <div>
+                          <strong>参加しない</strong>
+                        </div>
+                        <div style={{ marginTop: "6px" }}>
+                          {responses.absent.length > 0
+                            ? responses.absent.map((name, index) => (
+                                <div
+                                  key={index}
+                                  style={{
+                                    whiteSpace: "nowrap",
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                  }}
+                                >
+                                  {name}
+                                </div>
+                              ))
+                            : "なし"}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ marginTop: "10px" }}>
+                    <label>回答締切</label>
+                    <div>
+                      <input
+                        type="date"
+                        value={deadlineDate}
+                        onChange={(e) => setDeadlineDate(e.target.value)}
+                      />
+                      <input
+                        type="time"
+                        value={deadlineTime}
+                        onChange={(e) => setDeadlineTime(e.target.value)}
+                        style={{ marginTop: "8px" }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div style={{ marginTop: "15px" }}>
                 <button onClick={handleSave}>
@@ -596,7 +730,7 @@ const fetchEventsRange = async (startDate, endDate) => {
                     style={{
                       marginLeft: "10px",
                       background: "#e74c3c",
-                      color: "white"
+                      color: "white",
                     }}
                   >
                     削除
@@ -627,7 +761,7 @@ const fetchEventsRange = async (startDate, endDate) => {
           eventClick={handleEventClick}
           events={events}
           dayCellClassNames={(arg) => {
-            const classes = []; 
+            const classes = [];
 
             if (isHoliday(arg.date)) {
               classes.push("holiday");
@@ -644,7 +778,7 @@ const fetchEventsRange = async (startDate, endDate) => {
               }
             }
 
-            return classes; 
+            return classes;
           }}
           eventContent={(arg) => {
             const creator = arg.event.extendedProps.creator;
