@@ -129,6 +129,16 @@ public List<CalendarEventDto> list(
                             .orElse(null);
                 }
 
+                var users = surveyAnswerRepository
+                    .findByEventId(e.getId())
+                    .stream()
+                    .map(a -> new AttendeeDto(
+                            a.getUser().getEmail(),
+                            convertStatus(a.getAnswer()),
+                            a.getAnswer()
+                    ))
+                    .toList();
+
                 return new CalendarEventDto(
                         String.valueOf(e.getId()),
                         e.getTitle(),
@@ -143,7 +153,8 @@ public List<CalendarEventDto> list(
 
                         attendCount,
                         absentCount,
-                        myAnswer
+                        myAnswer,
+                        users
                 );
             })
             .toList();
@@ -175,7 +186,8 @@ public List<CalendarEventDto> list(
 
                         0L,     // ← 仮でOK（後で集計）
                         0L,     // ← 仮でOK
-                        null    // ← 自分の回答
+                        null,  // ← 自分の回答
+                        List.of()
                 ))
                 .toList();
     }

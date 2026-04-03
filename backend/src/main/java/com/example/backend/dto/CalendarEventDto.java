@@ -1,5 +1,7 @@
 package com.example.backend.dto;
 
+import java.util.List;
+
 public record CalendarEventDto(
         String id,
         String title,
@@ -13,5 +15,6 @@ public record CalendarEventDto(
         String deadline,
         Long attendCount,
         Long absentCount,
-        String myAnswer
+        String myAnswer,
+        List<AttendeeDto> users
 ) {}
