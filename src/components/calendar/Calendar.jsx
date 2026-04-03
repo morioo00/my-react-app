@@ -93,6 +93,10 @@ export default function Calendar() {
   const [allowAbsent, setAllowAbsent] = useState(false);
   const [deadlineDate, setDeadlineDate] = useState("");
   const [deadlineTime, setDeadlineTime] = useState("23:59");
+  const [responses, setResponses] = useState({
+  attend: [],
+  absent: [],
+  });
 
   const [events, setEvents] = useState([]);
 
@@ -546,25 +550,135 @@ const fetchEventsRange = async (startDate, endDate) => {
     <div>
       <label>回答項目</label>
       <div>
-        <label style={{ display: "block" }}>
-          <input
-            type="checkbox"
-            checked={allowAttend}
-            onChange={(e) => setAllowAttend(e.target.checked)}
-          />
-          参加する
-        </label>
+       <label style={{ display: "block" }}>
+  <input
+    type="checkbox"
+    checked={allowAttend}
+    onChange={(e) => {
+      const checked = e.target.checked;
+      setAllowAttend(checked);
+
+      setResponses((prev) => {
+        const nextAttend = checked
+          ? [...prev.attend.filter((name) => name !== currentUserEmail), currentUserEmail]
+          : prev.attend.filter((name) => name !== currentUserEmail);
+
+        const nextAbsent = prev.absent.filter((name) => name !== currentUserEmail);
+
+        return {
+          attend: nextAttend,
+          absent: nextAbsent,
+        };
+      });
+    }}
+  />
+  参加する
+</label>
 
         <label style={{ display: "block", marginTop: "4px" }}>
-          <input
-            type="checkbox"
-            checked={allowAbsent}
-            onChange={(e) => setAllowAbsent(e.target.checked)}
-          />
-          参加しない
-        </label>
+  <input
+    type="checkbox"
+    checked={allowAbsent}
+    onChange={(e) => {
+      const checked = e.target.checked;
+      setAllowAbsent(checked);
+
+      setResponses((prev) => {
+        const nextAbsent = checked
+          ? [...prev.absent.filter((name) => name !== currentUserEmail), currentUserEmail]
+          : prev.absent.filter((name) => name !== currentUserEmail);
+
+        const nextAttend = prev.attend.filter((name) => name !== currentUserEmail);
+
+        return {
+          attend: nextAttend,
+          absent: nextAbsent,
+        };
+      });
+    }}
+  />
+  参加しない
+</label>
       </div>
     </div>
+
+{/* 回答者一覧（編集不可） */}
+<div
+  style={{
+    marginTop: "10px",
+    border: "1px solid #ddd",
+    padding: "10px",
+    borderRadius: "6px",
+  }}
+>
+  <div style={{ fontWeight: "bold" }}>回答者一覧</div>
+
+  <div
+    style={{
+      display: "flex",
+      gap: "24px",
+      marginTop: "10px",
+    }}
+  >
+    <div
+      style={{
+        flex: 1,
+        paddingRight: "12px",
+        borderRight: "1px solid #ddd",
+      }}
+    >
+      <div>
+        <strong>参加する</strong>
+      </div>
+      <div style={{ marginTop: "6px" }}>
+  {responses.attend.length > 0 ? (
+    responses.attend.map((name, index) => (
+      <div
+        key={index}
+        style={{
+          whiteSpace: "nowrap",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+        }}
+      >
+        {name}
+      </div>
+    ))
+  ) : (
+    "なし"
+  )}
+</div>
+    </div>
+
+    <div
+      style={{
+        flex: 1,
+      }}
+    >
+      <div>
+        <strong>参加しない</strong>
+      </div>
+     <div style={{ marginTop: "6px" }}>
+  {responses.absent.length > 0 ? (
+    responses.absent.map((name, index) => (
+      <div
+        key={index}
+        style={{
+          whiteSpace: "nowrap",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+        }}
+      >
+        {name}
+      </div>
+    ))
+  ) : (
+    "なし"
+  )}
+</div>
+    </div>
+  </div>
+</div>
 
     <div style={{ marginTop: "10px" }}>
       <label>回答締切</label>
