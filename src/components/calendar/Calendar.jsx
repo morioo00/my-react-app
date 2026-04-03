@@ -4,12 +4,9 @@ import interactionPlugin from "@fullcalendar/interaction";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import "./Calendar.css";
 import CalendarSearchPanel from "./search/CalendarSearchPanel";
-import mockSearcher from "./search/searchers/mockSearcher";
 import apiSearcher from "./search/searchers/apiSearcher";
 import authFetch from "../auth/authFetch";
-import { getToken } from "../auth/tokenStorage";
-import { isHoliday } from "./holidayUtils"; //祝日指定
-
+import { isHoliday } from "./holidayUtils";
 import { supabase } from "../../lib/supabaseClient";
 
 function toDate(dateStr, timeStr) {
@@ -17,40 +14,85 @@ function toDate(dateStr, timeStr) {
   return new Date(`${dateStr}T${t}:00`);
 }
 
+function pad(n) {
+  return String(n).padStart(2, "0");
+}
+
+function toLocalIso(d) {
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(
+    d.getDate(),
+  )}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function formatDateToInputValue(dateLike) {
+  const d = new Date(dateLike);
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+function mapDtoToEvent(dto) {
+  let surveyOptions = [];
+
+  try {
+    if (Array.isArray(dto.surveyOptions)) {
+      surveyOptions = dto.surveyOptions;
+    } else if (typeof dto.surveyOptions === "string" && dto.surveyOptions) {
+      surveyOptions = JSON.parse(dto.surveyOptions);
+    }
+  } catch (e) {
+    console.error("surveyOptions parse error:", e);
+    surveyOptions = [];
+  }
+
+  return {
+    id: String(dto.id),
+    title: dto.title,
+    start: dto.startAt ?? dto.start,
+    end: dto.endAt ?? dto.end,
+    extendedProps: {
+      creator: dto.authorUsername ?? dto.creator ?? "",
+      memo: dto.memo ?? "",
+      reminder: dto.reminder ?? "none", // ここ整理
+      isSurvey: dto.isSurvey ?? false,
+      surveyContent: dto.surveyContent ?? "",
+      surveyOptions,
+      deadline: dto.deadline ?? null,
+    },
+  };
+}
+
 export default function Calendar() {
   const calendarRef = useRef(null);
 
-  const [viewTitle, setViewTitle] = useState(""); // 例: February 2026
-  const calApi = () => calendarRef.current?.getApi();
-  const goToday = () => calApi()?.today();
-  const goPrev = () => calApi()?.prev();
-  const goNext = () => calApi()?.next();
-
-  const jumpToDate = (dateLike) => {
-    const d = dateLike instanceof Date ? dateLike : new Date(dateLike);
-
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, "0");
-    const dd = String(d.getDate()).padStart(2, "0");
-    const ymd = `${yyyy}-${mm}-${dd}`;
-
-    setHighlightDate(ymd); // ←ハイライトしたい日を保存
-    calApi()?.gotoDate(d); // ←月移動（/その日へ移動）
-
-    // 1.2秒後に消す（好みで時間調整OK）
-    setTimeout(() => setHighlightDate(null), 2000);
-  };
-
+  const [viewTitle, setViewTitle] = useState("");
   const [open, setOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState("");
   const [editingEventId, setEditingEventId] = useState(null);
 
   const [creator, setCreator] = useState("");
   const [currentUserEmail, setCurrentUserEmail] = useState("");
+
   const [title, setTitle] = useState("");
   const [memo, setMemo] = useState("");
   const [startTime, setStartTime] = useState("09:00");
   const [endTime, setEndTime] = useState("10:00");
+  const [reminder, setReminder] = useState("none");
+
+  // ===== ここ整理: アンケート関連 =====
+  const [isSurvey, setIsSurvey] = useState(false);
+  const [surveyContent, setSurveyContent] = useState("");
+  const [allowAttend, setAllowAttend] = useState(false);
+  const [allowAbsent, setAllowAbsent] = useState(false);
+  const [deadlineDate, setDeadlineDate] = useState("");
+  const [deadlineTime, setDeadlineTime] = useState("23:59");
+  const [myAnswer, setMyAnswer] = useState(""); // ここ追加: 自分の回答表示用
+
+  const [events, setEvents] = useState([]);
+  const [highlightDate, setHighlightDate] = useState(null);
+
+  const calApi = () => calendarRef.current?.getApi();
+  const goToday = () => calApi()?.today();
+  const goPrev = () => calApi()?.prev();
+  const goNext = () => calApi()?.next();
 
   useEffect(() => {
     const fetchLoggedInUser = async () => {
@@ -84,40 +126,6 @@ export default function Calendar() {
     [],
   );
 
-  const [reminder, setReminder] = useState("none");
-
-  // ===== 追加: アンケート関連 =====
-  const [isSurvey, setIsSurvey] = useState(false);
-  const [surveyContent, setSurveyContent] = useState("");
-  const [allowAttend, setAllowAttend] = useState(false);
-  const [allowAbsent, setAllowAbsent] = useState(false);
-  const [deadlineDate, setDeadlineDate] = useState("");
-  const [deadlineTime, setDeadlineTime] = useState("23:59");
-  const [responses, setResponses] = useState({
-    attend: [],
-    absent: [],
-  });
-
-  const [events, setEvents] = useState([]);
-
-  const [highlightDate, setHighlightDate] = useState(null); // "YYYY-MM-DD"
-
-  const [currentRange, setCurrentRange] = useState(null);
-
-  // ===== DBからイベント取得（初期表示用） =====
-  const pad = (n) => String(n).padStart(2, "0");
-  const toLocalIsoSec = (d) =>
-    `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
-      d.getHours(),
-    )}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-
-  const getThisMonthRange = () => {
-    const now = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
-    const end = new Date(now.getFullYear(), now.getMonth() + 1, 1, 0, 0, 0);
-    return { start, end };
-  };
-
   const fetchEventsRange = async (startDate, endDate) => {
     const fromISO = startDate.toISOString();
     const toISO = endDate.toISOString();
@@ -126,31 +134,13 @@ export default function Calendar() {
       const res = await authFetch(
         `http://localhost:8080/api/events?from=${encodeURIComponent(fromISO)}&to=${encodeURIComponent(toISO)}`,
       );
-      console.log("events fetch response", res);
 
       if (!res.ok) {
         throw new Error(`GET /api/events failed: ${res.status}`);
       }
 
       const dtos = await res.json();
-      const mapped = dtos.map((dto) => ({
-        id: String(dto.id),
-        title: dto.title,
-        start: dto.startAt ?? dto.start,
-        end: dto.endAt ?? dto.end,
-        extendedProps: {
-          creator: dto.authorUsername,
-          memo: dto.memo,
-
-          // 追加: フロント側用の初期値
-          reminder: "none",
-          isSurvey: false,
-          surveyContent: "",
-          surveyOptions: [],
-          deadline: null,
-        },
-      }));
-
+      const mapped = dtos.map(mapDtoToEvent);
       setEvents(mapped);
     } catch (e) {
       console.error(e);
@@ -158,20 +148,26 @@ export default function Calendar() {
     }
   };
 
-  // 月移動・表示範囲変更のたびに：タイトル更新＋その範囲をDBから再取得
   const handleDatesSet = async (arg) => {
     setViewTitle(arg.view.title);
-
-    setCurrentRange({
-      start: arg.start,
-      end: arg.end,
-    });
-
     await fetchEventsRange(arg.start, arg.end);
   };
 
-  // ===== 新規作成 =====
-  const openModalForDate = (dateStr) => {
+  const jumpToDate = (dateLike) => {
+    const d = dateLike instanceof Date ? dateLike : new Date(dateLike);
+
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    const ymd = `${yyyy}-${mm}-${dd}`;
+
+    setHighlightDate(ymd);
+    calApi()?.gotoDate(d);
+
+    setTimeout(() => setHighlightDate(null), 2000);
+  };
+
+  const resetFormForCreate = (dateStr) => {
     setEditingEventId(null);
     setSelectedDate(dateStr);
     setCreator(currentUserEmail);
@@ -182,14 +178,18 @@ export default function Calendar() {
     setEndTime("10:00");
     setReminder("none");
 
-    // 追加: 初期化
+    // ここ整理
     setIsSurvey(false);
     setSurveyContent("");
     setAllowAttend(false);
     setAllowAbsent(false);
     setDeadlineDate(dateStr);
     setDeadlineTime("23:59");
+    setMyAnswer("");
+  };
 
+  const openModalForDate = (dateStr) => {
+    resetFormForCreate(dateStr);
     setOpen(true);
   };
 
@@ -197,34 +197,29 @@ export default function Calendar() {
     openModalForDate(info.dateStr);
   };
 
-  // ===== 編集 =====
   const handleEventClick = (clickInfo) => {
     const event = clickInfo.event;
+    const options = event.extendedProps.surveyOptions || [];
 
     setEditingEventId(event.id);
     setSelectedDate(event.startStr.slice(0, 10));
     setCreator(event.extendedProps.creator || "");
-    setTitle(event.title);
+    setTitle(event.title || "");
     setMemo(event.extendedProps.memo || "");
     setStartTime(event.startStr.slice(11, 16));
     setEndTime(event.endStr?.slice(11, 16) || "10:00");
     setReminder(event.extendedProps.reminder || "none");
+
     setIsSurvey(event.extendedProps.isSurvey || false);
-
-    // 追加: アンケート情報を戻す
     setSurveyContent(event.extendedProps.surveyContent || "");
-
-    const options = event.extendedProps.surveyOptions || [];
     setAllowAttend(options.includes("参加する"));
     setAllowAbsent(options.includes("参加しない"));
+    setMyAnswer("");
 
     if (event.extendedProps.deadline) {
-      const d = new Date(event.extendedProps.deadline);
-      const yyyy = d.getFullYear();
-      const mm = String(d.getMonth() + 1).padStart(2, "0");
-      const dd = String(d.getDate()).padStart(2, "0");
-      setDeadlineDate(`${yyyy}-${mm}-${dd}`);
-      setDeadlineTime(d.toTimeString().slice(0, 5));
+      const deadline = new Date(event.extendedProps.deadline);
+      setDeadlineDate(formatDateToInputValue(deadline));
+      setDeadlineTime(deadline.toTimeString().slice(0, 5));
     } else {
       setDeadlineDate(event.startStr.slice(0, 10));
       setDeadlineTime("23:59");
@@ -233,11 +228,18 @@ export default function Calendar() {
     setOpen(true);
   };
 
-  // ===== 保存 =====
-  const handleSave = async () => {
-    console.log("save mode:", editingEventId);
+  const buildSurveyOptions = () => {
+    const options = [];
+    if (allowAttend) options.push("参加する");
+    if (allowAbsent) options.push("参加しない");
+    return options;
+  };
 
-    if (!title.trim()) return;
+  const handleSave = async () => {
+    if (!title.trim()) {
+      alert("タイトルを入力してください");
+      return;
+    }
 
     const start = toDate(selectedDate, startTime);
     const end = toDate(selectedDate, endTime);
@@ -247,7 +249,6 @@ export default function Calendar() {
       return;
     }
 
-    // 追加: アンケート用バリデーション
     let deadline = null;
     let surveyOptions = [];
 
@@ -257,8 +258,7 @@ export default function Calendar() {
         return;
       }
 
-      if (allowAttend) surveyOptions.push("参加する");
-      if (allowAbsent) surveyOptions.push("参加しない");
+      surveyOptions = buildSurveyOptions();
 
       if (surveyOptions.length === 0) {
         alert("参加する / 参加しない の少なくともどちらかを選んでください");
@@ -278,124 +278,69 @@ export default function Calendar() {
       }
     }
 
-    if (editingEventId) {
-      const pad = (n) => String(n).padStart(2, "0");
+    const payload = {
+      title: title.trim(),
+      memo: memo ?? "",
+      startAt: toLocalIso(start),
+      endAt: toLocalIso(end),
+      isSurvey,
+      surveyContent: isSurvey ? surveyContent : null,
+      surveyOptions: isSurvey ? JSON.stringify(surveyOptions) : null,
+      deadline: isSurvey && deadline ? deadline.toISOString() : null,
+    };
 
-      const toLocalIso = (d) =>
-        `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(
-          d.getDate(),
-        )}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    const url = editingEventId
+      ? `http://localhost:8080/api/events/${editingEventId}`
+      : "http://localhost:8080/api/events";
 
-      const payload = {
-        title: title.trim(),
-        memo: memo ?? "",
-        startAt: toLocalIso(start),
-        endAt: toLocalIso(end),
+    const method = editingEventId ? "PUT" : "POST";
+
+    try {
+      const res = await authFetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        throw new Error(`${method} failed`);
+      }
+
+      const savedOrUpdated = await res.json();
+
+      const normalizedEvent = {
+        id: String(savedOrUpdated.id),
+        title: savedOrUpdated.title,
+        start: savedOrUpdated.startAt ?? savedOrUpdated.start,
+        end: savedOrUpdated.endAt ?? savedOrUpdated.end,
+        extendedProps: {
+          creator: savedOrUpdated.authorUsername ?? creator,
+          memo: savedOrUpdated.memo ?? memo,
+          reminder,
+          isSurvey,
+          surveyContent: isSurvey ? surveyContent : "",
+          surveyOptions: isSurvey ? surveyOptions : [],
+          deadline: isSurvey && deadline ? deadline.toISOString() : null,
+        },
       };
 
-      try {
-        const res = await authFetch(
-          `http://localhost:8080/api/events/${editingEventId}`,
-          {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          },
-        );
-
-        if (!res.ok) throw new Error("update failed");
-
-        const updated = await res.json();
-
-        const updatedEvent = {
-          id: String(updated.id),
-          title: updated.title,
-          start: updated.startAt ?? updated.start,
-          end: updated.endAt ?? updated.end,
-          extendedProps: {
-            creator: updated.authorUsername,
-            memo: updated.memo,
-
-            // 追加: フロントだけで保持
-            reminder,
-            isSurvey,
-            surveyContent: isSurvey ? surveyContent : "",
-            surveyOptions: isSurvey ? surveyOptions : [],
-            deadline: isSurvey && deadline ? deadline.toISOString() : null,
-          },
-        };
-
+      if (editingEventId) {
         setEvents((prev) =>
-          prev.map((e) => (e.id === editingEventId ? updatedEvent : e)),
+          prev.map((e) => (e.id === editingEventId ? normalizedEvent : e)),
         );
-
-        setOpen(false);
-        return;
-      } catch (e) {
-        console.error(e);
-        alert("更新に失敗しました");
-        return;
+      } else {
+        setEvents((prev) => [...prev, normalizedEvent]);
       }
-    } else {
-      const pad = (n) => String(n).padStart(2, "0");
 
-      const toLocalIso = (d) =>
-        `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(
-          d.getDate(),
-        )}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-
-      const payload = {
-        title: title.trim(),
-        memo: memo ?? "",
-        startAt: toLocalIso(start),
-        endAt: toLocalIso(end),
-      };
-
-      try {
-        const res = await authFetch("http://localhost:8080/api/events", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-
-        if (!res.ok) throw new Error("create failed");
-
-        const saved = await res.json();
-
-        const newEvent = {
-          id: String(saved.id),
-          title: saved.title,
-          start: saved.startAt ?? saved.start,
-          end: saved.endAt ?? saved.end,
-          extendedProps: {
-            creator: saved.authorUsername,
-            memo: saved.memo,
-
-            // 追加: フロントだけで保持
-            reminder,
-            isSurvey,
-            surveyContent: isSurvey ? surveyContent : "",
-            surveyOptions: isSurvey ? surveyOptions : [],
-            deadline: isSurvey && deadline ? deadline.toISOString() : null,
-          },
-        };
-
-        setEvents((prev) => [...prev, newEvent]);
-
-        setOpen(false);
-        return;
-      } catch (e) {
-        console.error(e);
-        alert("保存に失敗しました");
-        return;
-      }
+      setOpen(false);
+    } catch (e) {
+      console.error(e);
+      alert(editingEventId ? "更新に失敗しました" : "保存に失敗しました");
     }
   };
 
-  // ===== 削除 =====
   const handleDelete = async () => {
     if (!editingEventId) return;
-
     if (!confirm("この予定を削除しますか？")) return;
 
     try {
@@ -406,10 +351,11 @@ export default function Calendar() {
         },
       );
 
-      if (!res.ok) throw new Error("delete failed");
+      if (!res.ok) {
+        throw new Error("delete failed");
+      }
 
       setEvents((prev) => prev.filter((e) => e.id !== editingEventId));
-
       setOpen(false);
     } catch (e) {
       console.error(e);
@@ -417,7 +363,32 @@ export default function Calendar() {
     }
   };
 
-  // ===== ハイライト表示用：eventsに背景イベントを混ぜる =====
+  // ===== ここ整理: 回答送信機能は残す =====
+  const handleAnswer = async (answer) => {
+    if (!editingEventId) return;
+
+    try {
+      const res = await authFetch(
+        `http://localhost:8080/api/events/${editingEventId}/answer`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ answer }),
+        },
+      );
+
+      if (!res.ok) {
+        throw new Error("answer failed");
+      }
+
+      setMyAnswer(answer); // ここ追加
+      alert("回答しました");
+    } catch (e) {
+      console.error(e);
+      alert("回答に失敗しました");
+    }
+  };
+
   const viewEvents = useMemo(() => {
     if (!highlightDate) return events;
 
@@ -425,14 +396,20 @@ export default function Calendar() {
 
     const endDate = new Date(`${highlightDate}T00:00:00`);
     endDate.setDate(endDate.getDate() + 1);
-    const end = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, "0")}-${String(endDate.getDate()).padStart(2, "0")}T00:00:00`;
+
+    const end = `${endDate.getFullYear()}-${String(
+      endDate.getMonth() + 1,
+    ).padStart(2, "0")}-${String(endDate.getDate()).padStart(
+      2,
+      "0",
+    )}T00:00:00`;
 
     const highlightBg = {
       id: "__highlight__",
       start,
       end,
       display: "background",
-      backgroundColor: "rgba(255, 230, 0, 0.25)", // 見えるように少し色つけ
+      backgroundColor: "rgba(255, 230, 0, 0.25)",
     };
 
     return [highlightBg, ...events];
@@ -440,8 +417,6 @@ export default function Calendar() {
 
   return (
     <div className="app-container notranslate" translate="no">
-      {/* PC上の日本語/英語翻訳対策 */}
-
       <div className="calendar-area">
         <CalendarSearchPanel
           title={viewTitle || "Calendar"}
@@ -465,17 +440,13 @@ export default function Calendar() {
         {open && (
           <div className="modal-overlay" onClick={() => setOpen(false)}>
             <div className="modal-box" onClick={(e) => e.stopPropagation()}>
-              <h3>
-                {editingEventId ? "予定編集" : `${selectedDate} の予定追加`}
-              </h3>
+              <h3>{editingEventId ? "予定編集" : `${selectedDate} の予定追加`}</h3>
 
-              {/* 作成者 */}
               <div className="creator-row">
                 <span className="creator-label">作成者：</span>
                 <span className="creator-value">{creator || "未ログイン"}</span>
               </div>
 
-              {/* タイトル */}
               <div>
                 <label>タイトル</label>
                 <input
@@ -485,7 +456,6 @@ export default function Calendar() {
                 />
               </div>
 
-              {/* メモ */}
               <div>
                 <label>内容メモ</label>
                 <textarea
@@ -495,7 +465,6 @@ export default function Calendar() {
                 />
               </div>
 
-              {/* 時間 */}
               <div>
                 <label>開始時間</label>
                 <input
@@ -514,7 +483,6 @@ export default function Calendar() {
                 />
               </div>
 
-              {/* 通知 */}
               <div>
                 <label>通知</label>
                 <select
@@ -553,39 +521,15 @@ export default function Calendar() {
                     />
                   </div>
 
-                  <div>
+                  <div style={{ marginTop: "10px" }}>
                     <label>回答項目</label>
-                    <div>
+
+                    <div style={{ marginTop: "6px" }}>
                       <label style={{ display: "block" }}>
                         <input
                           type="checkbox"
                           checked={allowAttend}
-                          onChange={(e) => {
-                            const checked = e.target.checked;
-                            setAllowAttend(checked);
-
-                            setResponses((prev) => {
-                              const nextAttend = checked
-                                ? [
-                                    ...prev.attend.filter(
-                                      (name) => name !== currentUserEmail,
-                                    ),
-                                    currentUserEmail,
-                                  ]
-                                : prev.attend.filter(
-                                    (name) => name !== currentUserEmail,
-                                  );
-
-                              const nextAbsent = prev.absent.filter(
-                                (name) => name !== currentUserEmail,
-                              );
-
-                              return {
-                                attend: nextAttend,
-                                absent: nextAbsent,
-                              };
-                            });
-                          }}
+                          onChange={(e) => setAllowAttend(e.target.checked)}
                         />
                         参加する
                       </label>
@@ -594,109 +538,10 @@ export default function Calendar() {
                         <input
                           type="checkbox"
                           checked={allowAbsent}
-                          onChange={(e) => {
-                            const checked = e.target.checked;
-                            setAllowAbsent(checked);
-
-                            setResponses((prev) => {
-                              const nextAbsent = checked
-                                ? [
-                                    ...prev.absent.filter(
-                                      (name) => name !== currentUserEmail,
-                                    ),
-                                    currentUserEmail,
-                                  ]
-                                : prev.absent.filter(
-                                    (name) => name !== currentUserEmail,
-                                  );
-
-                              const nextAttend = prev.attend.filter(
-                                (name) => name !== currentUserEmail,
-                              );
-
-                              return {
-                                attend: nextAttend,
-                                absent: nextAbsent,
-                              };
-                            });
-                          }}
+                          onChange={(e) => setAllowAbsent(e.target.checked)}
                         />
                         参加しない
                       </label>
-                    </div>
-                  </div>
-
-                  {/* 回答者一覧（編集不可） */}
-                  <div
-                    style={{
-                      marginTop: "10px",
-                      border: "1px solid #ddd",
-                      padding: "10px",
-                      borderRadius: "6px",
-                    }}
-                  >
-                    <div style={{ fontWeight: "bold" }}>回答者一覧</div>
-
-                    <div
-                      style={{
-                        display: "flex",
-                        gap: "24px",
-                        marginTop: "10px",
-                      }}
-                    >
-                      <div
-                        style={{
-                          flex: 1,
-                          paddingRight: "12px",
-                          borderRight: "1px solid #ddd",
-                        }}
-                      >
-                        <div>
-                          <strong>参加する</strong>
-                        </div>
-                        <div style={{ marginTop: "6px" }}>
-                          {responses.attend.length > 0
-                            ? responses.attend.map((name, index) => (
-                                <div
-                                  key={index}
-                                  style={{
-                                    whiteSpace: "nowrap",
-                                    overflow: "hidden",
-                                    textOverflow: "ellipsis",
-                                  }}
-                                >
-                                  {name}
-                                </div>
-                              ))
-                            : "なし"}
-                        </div>
-                      </div>
-
-                      <div
-                        style={{
-                          flex: 1,
-                        }}
-                      >
-                        <div>
-                          <strong>参加しない</strong>
-                        </div>
-                        <div style={{ marginTop: "6px" }}>
-                          {responses.absent.length > 0
-                            ? responses.absent.map((name, index) => (
-                                <div
-                                  key={index}
-                                  style={{
-                                    whiteSpace: "nowrap",
-                                    overflow: "hidden",
-                                    textOverflow: "ellipsis",
-                                  }}
-                                >
-                                  {name}
-                                </div>
-                              ))
-                            : "なし"}
-                        </div>
-                      </div>
                     </div>
                   </div>
 
@@ -716,6 +561,35 @@ export default function Calendar() {
                       />
                     </div>
                   </div>
+
+                  {editingEventId && (
+                    <div style={{ marginTop: "12px" }}>
+                      <label>回答する</label>
+
+                      <div style={{ marginTop: "6px" }}>
+                        {allowAttend && (
+                          <button onClick={() => handleAnswer("参加する")}>
+                            参加する
+                          </button>
+                        )}
+
+                        {allowAbsent && (
+                          <button
+                            onClick={() => handleAnswer("参加しない")}
+                            style={{ marginLeft: allowAttend ? "10px" : "0" }}
+                          >
+                            参加しない
+                          </button>
+                        )}
+                      </div>
+
+                      {myAnswer && (
+                        <div style={{ marginTop: "8px", fontSize: "14px" }}>
+                          あなたの回答: <strong>{myAnswer}</strong>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -748,7 +622,6 @@ export default function Calendar() {
           </div>
         )}
 
-        {/* ===== カレンダー ===== */}
         <FullCalendar
           ref={calendarRef}
           plugins={[dayGridPlugin, interactionPlugin]}
@@ -759,7 +632,7 @@ export default function Calendar() {
           datesSet={handleDatesSet}
           dateClick={handleDateClick}
           eventClick={handleEventClick}
-          events={events}
+          events={viewEvents} // ここ変更
           dayCellClassNames={(arg) => {
             const classes = [];
 
@@ -781,12 +654,13 @@ export default function Calendar() {
             return classes;
           }}
           eventContent={(arg) => {
-            const creator = arg.event.extendedProps.creator;
+            const creatorName = arg.event.extendedProps.creator;
+
             return (
               <div>
-                {creator && (
+                {creatorName && (
                   <div style={{ fontSize: "10px", fontWeight: "bold" }}>
-                    {creator}
+                    {creatorName}
                   </div>
                 )}
                 <div>{arg.event.title}</div>

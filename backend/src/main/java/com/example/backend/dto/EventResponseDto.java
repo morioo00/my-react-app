@@ -8,5 +8,9 @@ public record EventResponseDto(
         String memo,
         LocalDateTime startAt,
         LocalDateTime endAt,
-        String authorUsername) {
-}
+        String authorUsername,
+        Boolean isSurvey,
+        String surveyContent,
+        String surveyOptions,
+        LocalDateTime deadline
+) {}
