@@ -89,8 +89,8 @@ export default function Calendar() {
   // ===== 追加: アンケート関連 =====
   const [isSurvey, setIsSurvey] = useState(false);
   const [surveyContent, setSurveyContent] = useState("");
-  const [allowAttend, setAllowAttend] = useState(true); // ここ既存：初期は参加する
-  const [allowAbsent, setAllowAbsent] = useState(false);
+  const [allowAttend, setAllowAttend] = useState(false); // ここ変更：初期値は未選択
+  const [allowAbsent, setAllowAbsent] = useState(false); // ここ既存：初期値は未選択
   const [deadlineDate, setDeadlineDate] = useState("");
   const [deadlineTime, setDeadlineTime] = useState("23:59");
 
@@ -180,11 +180,11 @@ export default function Calendar() {
     setEndTime("10:00");
     setReminder("none");
 
-    // ここ既存：初期化
+    // ここ変更：初期化時は両方未選択
     setIsSurvey(false);
     setSurveyContent("");
-    setAllowAttend(true); // ここ既存：初期は参加する
-    setAllowAbsent(false);
+    setAllowAttend(false); // ここ変更
+    setAllowAbsent(false); // ここ変更
     setDeadlineDate(dateStr);
     setDeadlineTime("23:59");
 
@@ -214,8 +214,8 @@ export default function Calendar() {
 
     const options = event.extendedProps.surveyOptions || [];
     if (options.length === 0) {
-      setAllowAttend(true); // ここ既存：空なら参加するを初期値
-      setAllowAbsent(false);
+      setAllowAttend(false); // ここ変更：空なら両方未選択
+      setAllowAbsent(false); // ここ変更：空なら両方未選択
     } else {
       setAllowAttend(options.includes("参加する"));
       setAllowAbsent(options.includes("参加しない"));
@@ -260,11 +260,17 @@ export default function Calendar() {
         return;
       }
 
-      surveyOptions = allowAttend ? ["参加する"] : ["参加しない"]; // ここ変更：外側の変数に代入
-
-      if (surveyOptions.length === 0) {
-        alert("参加する / 参加しない の少なくともどちらかを選んでください");
+      // ここ変更：どちらも未選択なら保存不可
+      if (!allowAttend && !allowAbsent) {
+        alert("参加する / 参加しない のどちらかを選んでください");
         return;
+      }
+
+      // ここ変更：片方だけ配列に入れる
+      if (allowAttend) {
+        surveyOptions = ["参加する"];
+      } else if (allowAbsent) {
+        surveyOptions = ["参加しない"];
       }
 
       if (!deadlineDate) {
@@ -542,13 +548,7 @@ export default function Calendar() {
                     checked={isSurvey}
                     onChange={(e) => {
                       const checked = e.target.checked;
-                      setIsSurvey(checked);
-
-                      // 「参加する」を初期値にする
-                      if (checked && !allowAttend && !allowAbsent) {
-                        setAllowAttend(true);
-                        setAllowAbsent(false);
-                      }
+                      setIsSurvey(checked); // ここ変更：自動で参加するを入れない
                     }}
                   />
                   {editingEventId
@@ -567,6 +567,7 @@ export default function Calendar() {
                       rows="3"
                     />
                   </div>
+
                   <div>
                     <label>回答項目</label>
 
@@ -585,7 +586,8 @@ export default function Calendar() {
                             type="checkbox"
                             checked={allowAttend}
                             onChange={() => {
-                              if (!allowAttend) { // 片方だけON
+                              if (!allowAttend) {
+                                // ここ既存：片方だけON
                                 setAllowAttend(true);
                                 setAllowAbsent(false);
                               }
@@ -609,7 +611,8 @@ export default function Calendar() {
                             type="checkbox"
                             checked={allowAbsent}
                             onChange={() => {
-                              if (!allowAbsent) {  //片方だけON
+                              if (!allowAbsent) {
+                                // ここ既存：片方だけON
                                 setAllowAttend(false);
                                 setAllowAbsent(true);
                               }
@@ -680,7 +683,7 @@ export default function Calendar() {
           datesSet={handleDatesSet}
           dateClick={handleDateClick}
           eventClick={handleEventClick}
-          events={events}
+          events={viewEvents} // ここ変更：ハイライト込みの配列を使う
           dayCellClassNames={(arg) => {
             const classes = [];
 
