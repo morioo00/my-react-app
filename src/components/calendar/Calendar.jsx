@@ -56,6 +56,7 @@ function mapDtoToEvent(dto) {
       surveyContent: dto.surveyContent ?? "",
       surveyOptions,
       deadline: dto.deadline ?? null,
+      myAnswer: dto.myAnswer ?? "",
     },
   };
 }
@@ -84,7 +85,9 @@ export default function Calendar() {
   const [allowAbsent, setAllowAbsent] = useState(false);
   const [deadlineDate, setDeadlineDate] = useState("");
   const [deadlineTime, setDeadlineTime] = useState("23:59");
-  const [myAnswer, setMyAnswer] = useState(""); // ここ追加: 自分の回答表示用
+  const [myAnswer, setMyAnswer] = useState("");
+  const [answerSelection, setAnswerSelection] = useState("");
+  const [selfAnswerSelection, setSelfAnswerSelection] = useState("");
 
   const [events, setEvents] = useState([]);
   const [highlightDate, setHighlightDate] = useState(null);
@@ -186,6 +189,8 @@ export default function Calendar() {
     setDeadlineDate(dateStr);
     setDeadlineTime("23:59");
     setMyAnswer("");
+    setAnswerSelection("");
+    setSelfAnswerSelection("");
   };
 
   const openModalForDate = (dateStr) => {
@@ -214,7 +219,10 @@ export default function Calendar() {
     setSurveyContent(event.extendedProps.surveyContent || "");
     setAllowAttend(options.includes("参加する"));
     setAllowAbsent(options.includes("参加しない"));
-    setMyAnswer("");
+    const existingAnswer = event.extendedProps.myAnswer || "";
+    setMyAnswer(existingAnswer);
+    setAnswerSelection(existingAnswer);
+    setSelfAnswerSelection(existingAnswer);
 
     if (event.extendedProps.deadline) {
       const deadline = new Date(event.extendedProps.deadline);
@@ -236,6 +244,51 @@ export default function Calendar() {
   };
 
   const handleSave = async () => {
+    const isAuthor = creator === currentUserEmail;
+
+    if (editingEventId && isSurvey && !isAuthor) {
+      if (!answerSelection) {
+        alert("回答を選択してください");
+        return;
+      }
+
+      try {
+        const res = await authFetch(
+          `http://localhost:8080/api/events/${editingEventId}/answer`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ answer: answerSelection }),
+          },
+        );
+
+        if (!res.ok) {
+          throw new Error("answer failed");
+        }
+
+        setEvents((prev) =>
+          prev.map((e) =>
+            e.id === editingEventId
+              ? {
+                  ...e,
+                  extendedProps: {
+                    ...e.extendedProps,
+                    myAnswer: answerSelection,
+                  },
+                }
+              : e,
+          ),
+        );
+        setMyAnswer(answerSelection);
+        alert("回答を保存しました");
+        setOpen(false);
+      } catch (e) {
+        console.error(e);
+        alert("回答の保存に失敗しました");
+      }
+      return;
+    }
+
     if (!title.trim()) {
       alert("タイトルを入力してください");
       return;
@@ -262,6 +315,11 @@ export default function Calendar() {
 
       if (surveyOptions.length === 0) {
         alert("参加する / 参加しない の少なくともどちらかを選んでください");
+        return;
+      }
+
+      if (selfAnswerSelection && !surveyOptions.includes(selfAnswerSelection)) {
+        alert("自分の回答は回答項目に含まれている必要があります");
         return;
       }
 
@@ -307,6 +365,7 @@ export default function Calendar() {
       }
 
       const savedOrUpdated = await res.json();
+      const savedEventId = String(savedOrUpdated.id);
 
       const normalizedEvent = {
         id: String(savedOrUpdated.id),
@@ -330,6 +389,23 @@ export default function Calendar() {
         );
       } else {
         setEvents((prev) => [...prev, normalizedEvent]);
+      }
+
+      if (isSurvey && selfAnswerSelection) {
+        const answerRes = await authFetch(
+          `http://localhost:8080/api/events/${savedEventId}/answer`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ answer: selfAnswerSelection }),
+          },
+        );
+
+        if (!answerRes.ok) {
+          throw new Error("self answer save failed");
+        }
+
+        setMyAnswer(selfAnswerSelection);
       }
 
       setOpen(false);
@@ -360,32 +436,6 @@ export default function Calendar() {
     } catch (e) {
       console.error(e);
       alert("削除に失敗しました");
-    }
-  };
-
-  // ===== ここ整理: 回答送信機能は残す =====
-  const handleAnswer = async (answer) => {
-    if (!editingEventId) return;
-
-    try {
-      const res = await authFetch(
-        `http://localhost:8080/api/events/${editingEventId}/answer`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ answer }),
-        },
-      );
-
-      if (!res.ok) {
-        throw new Error("answer failed");
-      }
-
-      setMyAnswer(answer); // ここ追加
-      alert("回答しました");
-    } catch (e) {
-      console.error(e);
-      alert("回答に失敗しました");
     }
   };
 
@@ -525,25 +575,100 @@ export default function Calendar() {
                     <label>回答項目</label>
 
                     <div style={{ marginTop: "6px" }}>
-                      <label style={{ display: "block" }}>
-                        <input
-                          type="checkbox"
-                          checked={allowAttend}
-                          onChange={(e) => setAllowAttend(e.target.checked)}
-                        />
-                        参加する
-                      </label>
+                      {(editingEventId && creator !== currentUserEmail) ? (
+                        <>
+                          {allowAttend && (
+                            <label style={{ display: "block" }}>
+                              <input
+                                type="checkbox"
+                                checked={answerSelection === "参加する"}
+                                onChange={(e) =>
+                                  setAnswerSelection(
+                                    e.target.checked ? "参加する" : "",
+                                  )
+                                }
+                              />
+                              参加する
+                            </label>
+                          )}
 
-                      <label style={{ display: "block", marginTop: "4px" }}>
-                        <input
-                          type="checkbox"
-                          checked={allowAbsent}
-                          onChange={(e) => setAllowAbsent(e.target.checked)}
-                        />
-                        参加しない
-                      </label>
+                          {allowAbsent && (
+                            <label
+                              style={{ display: "block", marginTop: "4px" }}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={answerSelection === "参加しない"}
+                                onChange={(e) =>
+                                  setAnswerSelection(
+                                    e.target.checked ? "参加しない" : "",
+                                  )
+                                }
+                              />
+                              参加しない
+                            </label>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          <label style={{ display: "block" }}>
+                            <input
+                              type="checkbox"
+                              checked={allowAttend}
+                              onChange={(e) => setAllowAttend(e.target.checked)}
+                            />
+                            参加する
+                          </label>
+
+                          <label style={{ display: "block", marginTop: "4px" }}>
+                            <input
+                              type="checkbox"
+                              checked={allowAbsent}
+                              onChange={(e) => setAllowAbsent(e.target.checked)}
+                            />
+                            参加しない
+                          </label>
+                        </>
+                      )}
                     </div>
                   </div>
+
+                  {(creator === currentUserEmail || !editingEventId) && (
+                    <div style={{ marginTop: "10px" }}>
+                      <label>自分の参加可否（任意）</label>
+                      <div style={{ marginTop: "6px" }}>
+                        {allowAttend && (
+                          <label style={{ display: "block" }}>
+                            <input
+                              type="checkbox"
+                              checked={selfAnswerSelection === "参加する"}
+                              onChange={(e) =>
+                                setSelfAnswerSelection(
+                                  e.target.checked ? "参加する" : "",
+                                )
+                              }
+                            />
+                            参加する
+                          </label>
+                        )}
+
+                        {allowAbsent && (
+                          <label style={{ display: "block", marginTop: "4px" }}>
+                            <input
+                              type="checkbox"
+                              checked={selfAnswerSelection === "参加しない"}
+                              onChange={(e) =>
+                                setSelfAnswerSelection(
+                                  e.target.checked ? "参加しない" : "",
+                                )
+                              }
+                            />
+                            参加しない
+                          </label>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
                   <div style={{ marginTop: "10px" }}>
                     <label>回答締切</label>
@@ -562,27 +687,9 @@ export default function Calendar() {
                     </div>
                   </div>
 
-                  {editingEventId && (
+                  {editingEventId && creator !== currentUserEmail && (
                     <div style={{ marginTop: "12px" }}>
-                      <label>回答する</label>
-
-                      <div style={{ marginTop: "6px" }}>
-                        {allowAttend && (
-                          <button onClick={() => handleAnswer("参加する")}>
-                            参加する
-                          </button>
-                        )}
-
-                        {allowAbsent && (
-                          <button
-                            onClick={() => handleAnswer("参加しない")}
-                            style={{ marginLeft: allowAttend ? "10px" : "0" }}
-                          >
-                            参加しない
-                          </button>
-                        )}
-                      </div>
-
+                      <label>回答は「更新」で保存されます</label>
                       {myAnswer && (
                         <div style={{ marginTop: "8px", fontSize: "14px" }}>
                           あなたの回答: <strong>{myAnswer}</strong>
