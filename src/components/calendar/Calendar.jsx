@@ -51,6 +51,7 @@ export default function Calendar() {
   const [memo, setMemo] = useState("");
   const [startTime, setStartTime] = useState("09:00");
   const [endTime, setEndTime] = useState("10:00");
+  const [myAnswer, setMyAnswer] = useState("");
 
   useEffect(() => {
     const fetchLoggedInUser = async () => {
@@ -118,45 +119,52 @@ export default function Calendar() {
     return { start, end };
   };
 
-  const fetchEventsRange = async (startDate, endDate) => {
-    const fromISO = startDate.toISOString();
-    const toISO = endDate.toISOString();
+const fetchEventsRange = async (startDate, endDate) => {
+  const fromISO = startDate.toISOString();
+  const toISO = endDate.toISOString();
 
-    try {
-      const res = await authFetch(
-        `http://localhost:8080/api/events?from=${encodeURIComponent(fromISO)}&to=${encodeURIComponent(toISO)}`,
-      );
-      console.log("events fetch response", res);
+  try {
+    const res = await authFetch(
+      `http://localhost:8080/api/events?from=${encodeURIComponent(fromISO)}&to=${encodeURIComponent(toISO)}`
+    );
 
-      if (!res.ok) {
-        throw new Error(`GET /api/events failed: ${res.status}`);
-      }
+    console.log("events fetch response", res);
 
-      const dtos = await res.json();
-      const mapped = dtos.map((dto) => ({
-        id: String(dto.id),
-        title: dto.title,
-        start: dto.startAt ?? dto.start,
-        end: dto.endAt ?? dto.end,
-        extendedProps: {
-          creator: dto.authorUsername,
-          memo: dto.memo,
-
-          // 追加: フロント側用の初期値
-          reminder: "none",
-          isSurvey: false,
-          surveyContent: "",
-          surveyOptions: [],
-          deadline: null,
-        },
-      }));
-
-      setEvents(mapped);
-    } catch (e) {
-      console.error(e);
-      alert("イベント取得に失敗しました: " + e.message);
+    if (!res.ok) {
+      throw new Error(`GET /api/events failed: ${res.status}`);
     }
-  };
+
+    const dtos = await res.json();
+
+    const mapped = dtos.map((dto) => ({
+      id: String(dto.id),
+      title: dto.title,
+      start: dto.startAt ?? dto.start,
+      end: dto.endAt ?? dto.end,
+      extendedProps: {
+        creator: dto.authorUsername,
+        memo: dto.memo,
+
+        // ← サーバーから来る値
+        isSurvey: dto.isSurvey ?? false,
+        surveyContent: dto.surveyContent ?? "",
+        surveyOptions: dto.surveyOptions
+          ? JSON.parse(dto.surveyOptions)
+          : [],
+        deadline: dto.deadline,
+
+        // ← フロント用
+        reminder: "none",
+      },
+    }));
+
+    setEvents(mapped);
+
+  } catch (e) {
+    console.error(e);
+    alert("イベント取得に失敗しました: " + e.message);
+  }
+};
 
   // 月移動・表示範囲変更のたびに：タイトル更新＋その範囲をDBから再取得
   const handleDatesSet = async (arg) => {
@@ -297,21 +305,25 @@ export default function Calendar() {
         )}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 
       const payload = {
-        title: title.trim(),
-        memo: memo ?? "",
-        startAt: toLocalIso(start),
-        endAt: toLocalIso(end),
-      };
+    title: title.trim(),
+    memo: memo ?? "",
+    startAt: toLocalIso(start),
+    endAt: toLocalIso(end),
+    isSurvey,
+    surveyContent: isSurvey ? surveyContent : null,
+    surveyOptions: isSurvey ? JSON.stringify(surveyOptions) : null,
+    deadline: isSurvey && deadline ? deadline.toISOString() : null,
+};
 
-      try {
-        const res = await authFetch(
-          `http://localhost:8080/api/events/${editingEventId}`,
-          {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          },
-        );
+  try {
+    const res = await authFetch(
+      `http://localhost:8080/api/events/${editingEventId}`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }
+    );
 
         if (!res.ok) throw new Error("update failed");
 
@@ -343,7 +355,7 @@ export default function Calendar() {
         return;
       } catch (e) {
         console.error(e);
-        alert("更新に失敗しました");
+        alert("イベント作成者が違います。編集に失敗しました。");
         return;
       }
     } else {
@@ -359,6 +371,10 @@ export default function Calendar() {
         memo: memo ?? "",
         startAt: toLocalIso(start),
         endAt: toLocalIso(end),
+        isSurvey,
+        surveyContent: isSurvey ? surveyContent : null,
+        surveyOptions: isSurvey ? JSON.stringify(surveyOptions) : null,
+        deadline: isSurvey && deadline ? deadline.toISOString() : null,
       };
 
       try {
@@ -385,7 +401,7 @@ export default function Calendar() {
             reminder,
             isSurvey,
             surveyContent: isSurvey ? surveyContent : "",
-            surveyOptions: isSurvey ? surveyOptions : [],
+            surveyOptions: isSurvey ? JSON.stringify(surveyOptions) : null,
             deadline: isSurvey && deadline ? deadline.toISOString() : null,
           },
         };
@@ -423,9 +439,32 @@ export default function Calendar() {
       setOpen(false);
     } catch (e) {
       console.error(e);
-      alert("削除に失敗しました");
+      alert("イベント作成者が違います。削除に失敗しました。");
     }
   };
+
+
+  // ===== 回答送信 ===== ← ★これ追加
+const handleAnswer = async (answer) => {
+  try {
+    const res = await authFetch(
+      `http://localhost:8080/api/events/${editingEventId}/answer`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ answer }),
+      }
+    );
+
+    if (!res.ok) throw new Error("answer failed");
+
+    alert("回答しました");
+
+  } catch (e) {
+    console.error(e);
+    alert("回答に失敗しました");
+  }
+};
 
   // ===== ハイライト表示用：eventsに背景イベントを混ぜる =====
   const viewEvents = useMemo(() => {
