@@ -190,6 +190,11 @@ export default function Calendar() {
     setDeadlineDate(dateStr);
     setDeadlineTime("23:59");
 
+    setResponses({
+      attend: [],
+      absent: [],
+    });
+
     setOpen(true);
   };
 
@@ -229,6 +234,11 @@ export default function Calendar() {
       setDeadlineDate(event.startStr.slice(0, 10));
       setDeadlineTime("23:59");
     }
+
+    setResponses({
+      attend: [],
+      absent: [],
+    });
 
     setOpen(true);
   };
