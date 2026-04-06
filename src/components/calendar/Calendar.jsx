@@ -119,47 +119,27 @@ export default function Calendar() {
     return { start, end };
   };
 
-  const fetchEventsRange = async (startDate, endDate) => {
-    const fromISO = startDate.toISOString();
-    const toISO = endDate.toISOString();
+const fetchEventsRange = async (startDate, endDate) => {
+  const fromISO = startDate.toISOString();
+  const toISO = endDate.toISOString();
 
-    try {
-      const res = await authFetch(
-        `http://localhost:8080/api/events?from=${encodeURIComponent(fromISO)}&to=${encodeURIComponent(toISO)}`,
-      );
-      console.log("events fetch response", res);
+  try {
+    const res = await authFetch(
+      `http://localhost:8080/api/events?from=${encodeURIComponent(fromISO)}&to=${encodeURIComponent(toISO)}`
+    );
 
-      if (!res.ok) {
-        throw new Error(`GET /api/events failed: ${res.status}`);
-      }
+    console.log("events fetch response", res);
 
-      const dtos = await res.json();
-      const mapped = dtos.map((dto) => ({
-        id: String(dto.id),
-        title: dto.title,
-        start: dto.startAt ?? dto.start,
-        end: dto.endAt ?? dto.end,
-        extendedProps: {
-          creator: dto.authorUsername,
-          memo: dto.memo,
-
-          // 追加: フロント側用の初期値
-          reminder: "none",
-          isSurvey: false,
-          surveyContent: "",
-          surveyOptions: [],
-          deadline: null,
-        },
-      }));
-
-      setEvents(mapped);
-    } catch (e) {
-      console.error(e);
-      alert("イベント取得に失敗しました: " + e.message);
+    if (!res.ok) {
+      throw new Error(`GET /api/events failed: ${res.status}`);
     }
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 131fb03e00a725e9aa748b725098fc78e9a17624
 
     const dtos = await res.json();
+
     const mapped = dtos.map((dto) => ({
       id: String(dto.id),
       title: dto.title,
@@ -169,24 +149,32 @@ export default function Calendar() {
         creator: dto.authorUsername,
         memo: dto.memo,
 
+        // ← サーバーから来る値
         isSurvey: dto.isSurvey ?? false,
         surveyContent: dto.surveyContent ?? "",
         surveyOptions: dto.surveyOptions
-        ? JSON.parse(dto.surveyOptions)
-        : [],
+          ? JSON.parse(dto.surveyOptions)
+          : [],
         deadline: dto.deadline,
+
+        // ← フロント用
+        reminder: "none",
       },
     }));
 
     setEvents(mapped);
+
   } catch (e) {
     console.error(e);
     alert("イベント取得に失敗しました: " + e.message);
   }
 };
+<<<<<<< HEAD
 =======
   };
 >>>>>>> 8da2878a813c75043ec69756c66ad28a4d1f1464
+=======
+>>>>>>> 131fb03e00a725e9aa748b725098fc78e9a17624
 
   // 月移動・表示範囲変更のたびに：タイトル更新＋その範囲をDBから再取得
   const handleDatesSet = async (arg) => {
@@ -328,6 +316,9 @@ export default function Calendar() {
 };
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 131fb03e00a725e9aa748b725098fc78e9a17624
   try {
     const res = await authFetch(
       `http://localhost:8080/api/events/${editingEventId}`,
@@ -337,6 +328,7 @@ export default function Calendar() {
         body: JSON.stringify(payload),
       }
     );
+<<<<<<< HEAD
 =======
       try {
         const res = await authFetch(
@@ -348,6 +340,8 @@ export default function Calendar() {
           },
         );
 >>>>>>> 8da2878a813c75043ec69756c66ad28a4d1f1464
+=======
+>>>>>>> 131fb03e00a725e9aa748b725098fc78e9a17624
 
         if (!res.ok) throw new Error("update failed");
 
@@ -379,7 +373,7 @@ export default function Calendar() {
         return;
       } catch (e) {
         console.error(e);
-        alert("更新に失敗しました");
+        alert("イベント作成者が違います。編集に失敗しました。");
         return;
       }
     } else {
@@ -463,7 +457,7 @@ export default function Calendar() {
       setOpen(false);
     } catch (e) {
       console.error(e);
-      alert("削除に失敗しました");
+      alert("イベント作成者が違います。削除に失敗しました。");
     }
   };
 
@@ -616,6 +610,7 @@ const handleAnswer = async (answer) => {
               </div>
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 {isSurvey && (
   <div style={{ marginTop: "12px" }}>
     {/* アンケート内容 */}
@@ -641,6 +636,8 @@ const handleAnswer = async (answer) => {
           参加する
         </label>
 =======
+=======
+>>>>>>> 131fb03e00a725e9aa748b725098fc78e9a17624
               {isSurvey && (
                 <div style={{ marginTop: "12px" }}>
                   <div>
@@ -663,12 +660,16 @@ const handleAnswer = async (answer) => {
                             onChange={(e) => {
                               const checked = e.target.checked;
                               setAllowAttend(checked);
+<<<<<<< HEAD
 >>>>>>> 8da2878a813c75043ec69756c66ad28a4d1f1464
+=======
+>>>>>>> 131fb03e00a725e9aa748b725098fc78e9a17624
 
                               if (checked) {
                                 setAllowAbsent(false);
                               }
 
+<<<<<<< HEAD
 <<<<<<< HEAD
     {/* 締切 */}
     <div style={{ marginTop: "10px" }}>
@@ -710,6 +711,8 @@ const handleAnswer = async (answer) => {
   </div>
 )}
 =======
+=======
+>>>>>>> 131fb03e00a725e9aa748b725098fc78e9a17624
                               setResponses((prev) => {
                                 const nextAttend = checked
                                   ? [
@@ -869,7 +872,10 @@ const handleAnswer = async (answer) => {
                   </div>
                 </div>
               )}
+<<<<<<< HEAD
 >>>>>>> 8da2878a813c75043ec69756c66ad28a4d1f1464
+=======
+>>>>>>> 131fb03e00a725e9aa748b725098fc78e9a17624
 
               <div style={{ marginTop: "15px" }}>
                 <button onClick={handleSave}>
