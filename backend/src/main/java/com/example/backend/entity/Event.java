@@ -74,4 +74,49 @@ public class Event {
     public void setAuthor(User author) {
         this.author = author;
     }
+
+    @Column(name = "is_survey")
+    private Boolean isSurvey;
+
+    @Column(name = "survey_content", columnDefinition = "TEXT")
+    private String surveyContent;
+
+    @Column(name = "survey_options", columnDefinition = "TEXT")
+    private String surveyOptions;
+
+    @Column(name = "deadline")
+    private LocalDateTime deadline;
+
+    public Boolean getIsSurvey() {
+    return isSurvey;
+}
+
+public void setIsSurvey(Boolean isSurvey) {
+    this.isSurvey = isSurvey;
+}
+
+public String getSurveyContent() {
+    return surveyContent;
+}
+
+public void setSurveyContent(String surveyContent) {
+    this.surveyContent = surveyContent;
+}
+
+public String getSurveyOptions() {
+    return surveyOptions;
+}
+
+public void setSurveyOptions(String surveyOptions) {
+    this.surveyOptions = surveyOptions;
+}
+
+public LocalDateTime getDeadline() {
+    return deadline;
+}
+
+public void setDeadline(LocalDateTime deadline) {
+    this.deadline = deadline;
+}
+
 }
