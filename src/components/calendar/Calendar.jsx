@@ -556,73 +556,83 @@ export default function Calendar() {
                   <div>
                     <label>回答項目</label>
                     <div>
-                      <label style={{ display: "block" }}>
-                        <input
-                          type="checkbox"
-                          checked={allowAttend}
-                          onChange={(e) => {
-                            const checked = e.target.checked;
-                            setAllowAttend(checked);
+                      <div>
+                        <div style={{ display: "block" }}>
+                          <input
+                            type="checkbox"
+                            checked={allowAttend}
+                            onChange={(e) => {
+                              const checked = e.target.checked;
+                              setAllowAttend(checked);
 
-                            setResponses((prev) => {
-                              const nextAttend = checked
-                                ? [
-                                    ...prev.attend.filter(
+                              if (checked) {
+                                setAllowAbsent(false);
+                              }
+
+                              setResponses((prev) => {
+                                const nextAttend = checked
+                                  ? [
+                                      ...prev.attend.filter(
+                                        (name) => name !== currentUserEmail,
+                                      ),
+                                      currentUserEmail,
+                                    ]
+                                  : prev.attend.filter(
                                       (name) => name !== currentUserEmail,
-                                    ),
-                                    currentUserEmail,
-                                  ]
-                                : prev.attend.filter(
-                                    (name) => name !== currentUserEmail,
-                                  );
+                                    );
 
-                              const nextAbsent = prev.absent.filter(
-                                (name) => name !== currentUserEmail,
-                              );
+                                const nextAbsent = prev.absent.filter(
+                                  (name) => name !== currentUserEmail,
+                                );
 
-                              return {
-                                attend: nextAttend,
-                                absent: nextAbsent,
-                              };
-                            });
-                          }}
-                        />
-                        参加する
-                      </label>
+                                return {
+                                  attend: nextAttend,
+                                  absent: nextAbsent,
+                                };
+                              });
+                            }}
+                          />
+                          <span style={{ marginLeft: "6px" }}>参加する</span>
+                        </div>
 
-                      <label style={{ display: "block", marginTop: "4px" }}>
-                        <input
-                          type="checkbox"
-                          checked={allowAbsent}
-                          onChange={(e) => {
-                            const checked = e.target.checked;
-                            setAllowAbsent(checked);
+                        <div style={{ display: "block", marginTop: "4px" }}>
+                          <input
+                            type="checkbox"
+                            checked={allowAbsent}
+                            onChange={(e) => {
+                              const checked = e.target.checked;
+                              setAllowAbsent(checked);
 
-                            setResponses((prev) => {
-                              const nextAbsent = checked
-                                ? [
-                                    ...prev.absent.filter(
+                              if (checked) {
+                                setAllowAttend(false);
+                              }
+
+                              setResponses((prev) => {
+                                const nextAbsent = checked
+                                  ? [
+                                      ...prev.absent.filter(
+                                        (name) => name !== currentUserEmail,
+                                      ),
+                                      currentUserEmail,
+                                    ]
+                                  : prev.absent.filter(
                                       (name) => name !== currentUserEmail,
-                                    ),
-                                    currentUserEmail,
-                                  ]
-                                : prev.absent.filter(
-                                    (name) => name !== currentUserEmail,
-                                  );
+                                    );
 
-                              const nextAttend = prev.attend.filter(
-                                (name) => name !== currentUserEmail,
-                              );
+                                const nextAttend = prev.attend.filter(
+                                  (name) => name !== currentUserEmail,
+                                );
 
-                              return {
-                                attend: nextAttend,
-                                absent: nextAbsent,
-                              };
-                            });
-                          }}
-                        />
-                        参加しない
-                      </label>
+                                return {
+                                  attend: nextAttend,
+                                  absent: nextAbsent,
+                                };
+                              });
+                            }}
+                          />
+                          <span style={{ marginLeft: "6px" }}>参加しない</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
