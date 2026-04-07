@@ -11,5 +11,4 @@ public class UserAnswerDto {
         this.email = email;
         this.answer = answer;
     }
-    private List<AttendeeDto> users;
 }

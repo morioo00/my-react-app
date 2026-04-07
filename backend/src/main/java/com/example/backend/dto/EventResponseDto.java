@@ -1,6 +1,7 @@
 package com.example.backend.dto;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 public record EventResponseDto(
         Long id,
@@ -12,5 +13,9 @@ public record EventResponseDto(
         Boolean isSurvey,
         String surveyContent,
         String surveyOptions,
-        LocalDateTime deadline
+        LocalDateTime deadline,
+        Integer attendCount,
+        Integer absentCount,
+        String myAnswer,
+        List<UserAnswerDto> users
 ) {}

@@ -1,4 +1,5 @@
 package com.example.backend.dto;
+import com.example.backend.dto.AttendeeDto; // 必要なら
 
 import java.util.List;
 

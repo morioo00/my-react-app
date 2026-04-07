@@ -8,13 +8,14 @@ import com.example.backend.entity.User;
 import com.example.backend.repository.EventRepository;
 import com.example.backend.repository.SurveyAnswerRepository;
 import com.example.backend.repository.UserRepository;
+import com.example.backend.service.EventService;
 
 import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.http.HttpStatus; // ここ追加
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException; // ここ追加
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -28,15 +29,18 @@ public class EventController {
     private final EventRepository repo;
     private final UserRepository userRepository;
     private final SurveyAnswerRepository surveyAnswerRepository;
+    private final EventService eventService;
 
     public EventController(
             EventRepository repo,
             UserRepository userRepository,
-            SurveyAnswerRepository surveyAnswerRepository) {
+            SurveyAnswerRepository surveyAnswerRepository,
+            EventService eventService) {
 
         this.repo = repo;
         this.userRepository = userRepository;
         this.surveyAnswerRepository = surveyAnswerRepository;
+        this.eventService = eventService;
     }
 
     // =========================
@@ -44,113 +48,22 @@ public class EventController {
     // =========================
     @PostMapping
     public EventResponseDto create(@RequestBody Event event, Authentication auth) {
-
-        System.out.println("===== CREATE DEBUG =====");
-        System.out.println("title=" + event.getTitle());
-        System.out.println("startAt=" + event.getStartAt());
-        System.out.println("endAt=" + event.getEndAt());
-        System.out.println("isSurvey=" + event.getIsSurvey());
-        System.out.println("surveyOptions=" + event.getSurveyOptions());
-        System.out.println("deadline=" + event.getDeadline());
-        System.out.println("===== DEBUG END =====");
-
-        if (event.getIsSurvey() == null) {
-            event.setIsSurvey(false);
-        }
-
-        if (!event.getIsSurvey()) {
-            event.setSurveyContent(null);
-            event.setSurveyOptions(null);
-            event.setDeadline(null);
-        }
-
-        Jwt jwt = (Jwt) auth.getPrincipal();
-        String sub = jwt.getSubject();
-        String email = jwt.getClaim("email");
-
-        User user = userRepository.findBySupabaseUserId(sub)
-                .orElseGet(() -> {
-                    User newUser = new User();
-                    newUser.setSupabaseUserId(sub);
-                    newUser.setEmail(email);
-                    return userRepository.save(newUser);
-                });
-
-        event.setAuthor(user);
-
-        Event saved = repo.save(event);
-
-        return new EventResponseDto(
-                saved.getId(),
-                saved.getTitle(),
-                saved.getMemo(),
-                saved.getStartAt(),
-                saved.getEndAt(),
-                saved.getAuthor() != null ? saved.getAuthor().getEmail() : null,
-                saved.getIsSurvey(),
-                saved.getSurveyContent(),
-                saved.getSurveyOptions(),
-                saved.getDeadline());
+        return eventService.createEvent(event, auth);
     }
 
     // =========================
     // イベント取得（カレンダー表示）
     // =========================
     @GetMapping
-    public List<CalendarEventDto> list(
+    public List<EventResponseDto> list(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to,
             Authentication auth) {
 
         Jwt jwt = (Jwt) auth.getPrincipal();
-        String sub = jwt.getSubject();
+        String email = jwt.getClaim("email");
 
-        User user = userRepository.findBySupabaseUserId(sub).orElse(null);
-
-        return repo.findByStartAtLessThanAndEndAtGreaterThan(to, from)
-                .stream()
-                .map(e -> {
-
-                    Long attendCount = surveyAnswerRepository
-                            .countByEventIdAndAnswer(e.getId(), "参加する");
-
-                    Long absentCount = surveyAnswerRepository
-                            .countByEventIdAndAnswer(e.getId(), "参加しない");
-
-                    String myAnswer = null;
-                    if (user != null) {
-                        myAnswer = surveyAnswerRepository
-                                .findByEventIdAndUserId(e.getId(), user.getId())
-                                .map(a -> a.getAnswer())
-                                .orElse(null);
-                    }
-
-                    var users = surveyAnswerRepository
-                            .findByEventId(e.getId())
-                            .stream()
-                            .map(a -> new AttendeeDto(
-                                    a.getUser().getEmail(),
-                                    convertStatus(a.getAnswer()),
-                                    a.getAnswer()))
-                            .toList();
-
-                    return new CalendarEventDto(
-                            String.valueOf(e.getId()),
-                            e.getTitle(),
-                            e.getStartAt().toString(),
-                            e.getEndAt().toString(),
-                            e.getAuthor() != null ? e.getAuthor().getEmail() : null,
-                            e.getMemo(),
-                            e.getIsSurvey(),
-                            e.getSurveyContent(),
-                            e.getSurveyOptions(),
-                            e.getDeadline() != null ? e.getDeadline().toString() : null,
-                            attendCount,
-                            absentCount,
-                            myAnswer,
-                            users);
-                })
-                .toList();
+        return eventService.getEvents(from, to, email);
     }
 
     // =========================
@@ -185,7 +98,6 @@ public class EventController {
 
     // =========================
     // イベント更新
-    // 投稿者本人のみ更新可能
     // =========================
     @PutMapping("/{id}")
     public EventResponseDto updateEvent(
@@ -193,75 +105,11 @@ public class EventController {
             @RequestBody Event updatedEvent,
             Authentication auth) {
 
-        Event event = repo.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "Event not found"));
-
-        Jwt jwt = (Jwt) auth.getPrincipal();
-        String sub = jwt.getSubject();
-
-        User currentUser = userRepository.findBySupabaseUserId(sub)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.UNAUTHORIZED,
-                        "ログインユーザーが見つかりません"));
-
-        // ===== 確認ログ =====
-        System.out.println("===== UPDATE OWNER CHECK =====");
-        System.out.println("event.id = " + event.getId());
-        System.out.println("event.author.id = " +
-                (event.getAuthor() != null ? event.getAuthor().getId() : null));
-        System.out.println("event.author.email = " +
-                (event.getAuthor() != null ? event.getAuthor().getEmail() : null));
-        System.out.println("event.author.supabaseUserId = " +
-                (event.getAuthor() != null ? event.getAuthor().getSupabaseUserId() : null));
-        System.out.println("currentUser.id = " + currentUser.getId());
-        System.out.println("currentUser.email = " + currentUser.getEmail());
-        System.out.println("currentUser.supabaseUserId = " + currentUser.getSupabaseUserId());
-        System.out.println("jwt sub = " + sub);
-        System.out.println("===== END OWNER CHECK =====");
-
-        // ===== author nullチェック =====
-        if (event.getAuthor() == null) {
-            throw new ResponseStatusException(
-                    HttpStatus.INTERNAL_SERVER_ERROR,
-                    "イベントに作成者が設定されていません");
-        }
-
-        // ===== 所有者チェック =====
-        if (!event.getAuthor().getId().equals(currentUser.getId())) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "自分が作成したイベントのみ更新できます");
-        }
-
-        event.setTitle(updatedEvent.getTitle());
-        event.setMemo(updatedEvent.getMemo());
-        event.setStartAt(updatedEvent.getStartAt());
-        event.setEndAt(updatedEvent.getEndAt());
-        event.setIsSurvey(updatedEvent.getIsSurvey());
-        event.setSurveyContent(updatedEvent.getSurveyContent());
-        event.setSurveyOptions(updatedEvent.getSurveyOptions());
-        event.setDeadline(updatedEvent.getDeadline());
-
-        Event saved = repo.save(event);
-
-        return new EventResponseDto(
-                saved.getId(),
-                saved.getTitle(),
-                saved.getMemo(),
-                saved.getStartAt(),
-                saved.getEndAt(),
-                saved.getAuthor() != null ? saved.getAuthor().getEmail() : null,
-                saved.getIsSurvey(),
-                saved.getSurveyContent(),
-                saved.getSurveyOptions(),
-                saved.getDeadline());
+        return eventService.updateEvent(id, updatedEvent, auth);
     }
 
     // =========================
     // イベント削除
-    // 投稿者本人のみ削除可能
     // =========================
     @DeleteMapping("/{id}")
     public void deleteEvent(@PathVariable Long id, Authentication auth) {
@@ -279,27 +127,12 @@ public class EventController {
                         HttpStatus.UNAUTHORIZED,
                         "ログインユーザーが見つかりません"));
 
-        // ===== 確認ログ =====
-        System.out.println("===== DELETE OWNER CHECK =====");
-        System.out.println("event.id = " + event.getId());
-        System.out.println("event.author.id = " +
-                (event.getAuthor() != null ? event.getAuthor().getId() : null));
-        System.out.println("event.author.email = " +
-                (event.getAuthor() != null ? event.getAuthor().getEmail() : null));
-        System.out.println("currentUser.id = " + currentUser.getId());
-        System.out.println("currentUser.email = " + currentUser.getEmail());
-        System.out.println("currentUser.supabaseUserId = " + currentUser.getSupabaseUserId());
-        System.out.println("jwt sub = " + sub);
-        System.out.println("===== END DELETE OWNER CHECK =====");
-
-        // ===== author nullチェック =====
         if (event.getAuthor() == null) {
             throw new ResponseStatusException(
                     HttpStatus.INTERNAL_SERVER_ERROR,
                     "イベントに作成者が設定されていません");
         }
 
-        // ===== 所有者チェック =====
         if (!event.getAuthor().getId().equals(currentUser.getId())) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
@@ -309,6 +142,9 @@ public class EventController {
         repo.delete(event);
     }
 
+    // =========================
+    // アンケート回答
+    // =========================
     @PostMapping("/{eventId}/answer")
     public void answer(
             @PathVariable Long eventId,
@@ -341,29 +177,43 @@ public class EventController {
         surveyAnswerRepository.save(answer);
     }
 
+    // =========================
+    // 参加者一覧
+    // =========================
     @GetMapping("/{eventId}/attendees")
-    public List<AttendeeDto> getAttendees(@PathVariable Long eventId) {
+public List<AttendeeDto> getAttendees(@PathVariable Long eventId) {
 
-        List<User> users = userRepository.findAll();
+    // まずイベント取得
+    Event event = repo.findById(eventId)
+            .orElseThrow(() -> new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "Event not found"));
 
-        return users.stream().map(user -> {
-
-            var answer = surveyAnswerRepository
-                    .findByEventIdAndUserId(eventId, user.getId())
-                    .orElse(null);
-
-            return new AttendeeDto(
-                    user.getEmail(),
-                    answer != null ? convertStatus(answer.getAnswer()) : "NO_RESPONSE",
-                    answer != null ? answer.getAnswer() : null);
-        }).toList();
+    // 新規作成イベントの場合は回答者一覧を返さない
+    if (event.getIsSurvey() == null || !event.getIsSurvey()) {
+        return List.of(); // 空リストを返す
     }
 
+    List<User> users = userRepository.findAll();
+
+    return users.stream().map(user -> {
+
+        var answer = surveyAnswerRepository
+                .findByEventIdAndUserId(eventId, user.getId())
+                .orElse(null);
+
+        return new AttendeeDto(
+                user.getEmail(),
+                user.getName(),
+                user.getAvatarUrl(),
+                answer != null ? convertStatus(answer.getAnswer()) : "NO_RESPONSE",
+                answer != null ? answer.getAnswer() : null);
+    }).toList();
+}
+
     private String convertStatus(String answer) {
-        if ("参加する".equals(answer))
-            return "ATTEND";
-        if ("参加しない".equals(answer))
-            return "ABSENT";
+        if ("参加する".equals(answer)) return "ATTEND";
+        if ("参加しない".equals(answer)) return "ABSENT";
         return "UNKNOWN";
     }
 }

@@ -1,5 +1,6 @@
 package com.example.backend.service;
 
+import com.example.backend.dto.UserAnswerDto;
 import com.example.backend.entity.SurveyAnswer;
 import com.example.backend.repository.SurveyRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,13 +23,21 @@ public class SurveyService {
         return surveyRepository.countAbsent(eventId);
     }
 
-    public List<Map<String, String>> getUsers(Long eventId) {
+    public List<UserAnswerDto> getUsers(Long eventId) {
+        return surveyRepository.findByEventId(eventId)
+            .stream()
+            .map(s -> new UserAnswerDto(
+                    s.getUser().getEmail(),
+                    s.getAnswer()
+            ))
+            .toList();
+    }
+    public String getMyAnswer(Long eventId, String email) {
         return surveyRepository.findByEventId(eventId)
                 .stream()
-                .map(s -> Map.of(
-                        "email", s.getUser().getEmail(),
-                        "answer", s.getAnswer()
-                ))
-                .toList();
+                .filter(s -> s.getUser().getEmail().equals(email))
+                .map(SurveyAnswer::getAnswer)
+                .findFirst()
+                .orElse(null);
     }
 }
