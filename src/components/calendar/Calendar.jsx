@@ -99,12 +99,15 @@ export default function Calendar() {
   const [deadlineDate, setDeadlineDate] = useState("");
   const [deadlineTime, setDeadlineTime] = useState("23:59");
 
-
   const [events, setEvents] = useState([]);
 
   const [highlightDate, setHighlightDate] = useState(null); // "YYYY-MM-DD"
 
   const [currentRange, setCurrentRange] = useState(null);
+
+  const isOwner = //  自分のイベントかどうか判定
+    !!editingEventId && !!currentUserEmail && creator === currentUserEmail;
+  const isAnswerOnlyMode = !!editingEventId && !isOwner; // : 他人のイベントなら回答専用モード
 
   // ===== DBからイベント取得（初期表示用） =====
   const pad = (n) => String(n).padStart(2, "0");
@@ -149,9 +152,7 @@ export default function Calendar() {
           // アンケート系
           isSurvey: dto.isSurvey ?? false,
           surveyContent: dto.surveyContent ?? "",
-          surveyOptions: dto.surveyOptions
-            ? JSON.parse(dto.surveyOptions)
-            : [],
+          surveyOptions: dto.surveyOptions ? JSON.parse(dto.surveyOptions) : [],
           deadline: dto.deadline ?? null,
 
           // 👇追加（ここが今回の本命）
@@ -240,38 +241,74 @@ export default function Calendar() {
     // 👇これだけ残す
     try {
       const res = await authFetch(
-        `http://localhost:8080/api/events/${event.id}/attendees`
+        `http://localhost:8080/api/events/${event.id}/attendees`,
       );
 
       if (!res.ok) throw new Error("attendees fetch failed");
 
       const users = await res.json();
 
-      setAttendUsers(users.filter(u => u.status === "ATTEND"));
-      setAbsentUsers(users.filter(u => u.status === "ABSENT"));
-
+      setAttendUsers(users.filter((u) => u.status === "ATTEND"));
+      setAbsentUsers(users.filter((u) => u.status === "ABSENT"));
     } catch (e) {
       console.error(e);
       alert("取得失敗");
     } finally {
       setLoadingUsers(false);
     }
-
   };
 
   // ===== 保存 =====
   const handleSave = async () => {
     console.log("save mode:", editingEventId);
+      const start = toDate(selectedDate, startTime);
+      const end = toDate(selectedDate, endTime);
+
+    //  他人のイベントは回答だけ保存する
+    if (isAnswerOnlyMode && editingEventId) {
+      if (!selectedAnswer) {
+        alert("参加する / 参加しない のどちらかを選んでください。");
+        return;
+      }
+
+      try {
+        const res = await authFetch(
+          `http://localhost:8080/api/events/${editingEventId}/answer`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ answer: selectedAnswer }),
+          },
+        );
+
+        if (!res.ok) throw new Error("answer save failed");
+
+        // 回答者一覧を再取得
+        const attendeeRes = await authFetch(
+          `http://localhost:8080/api/events/${editingEventId}/attendees`,
+        );
+
+        if (!attendeeRes.ok) throw new Error("attendees fetch failed");
+
+        const users = await attendeeRes.json();
+
+        setAttendUsers(users.filter((u) => u.status === "ATTEND"));
+        setAbsentUsers(users.filter((u) => u.status === "ABSENT"));
+
+        // カレンダー再取得
+        await fetchEventsRange(currentRange.start, currentRange.end);
+
+        alert("回答を保存しました。");
+        setOpen(false);
+        return;
+      } catch (e) {
+        console.error(e);
+        alert("回答の保存に失敗しました。");
+        return;
+      }
+    }
 
     if (!title.trim()) return;
-
-    const start = toDate(selectedDate, startTime);
-    const end = toDate(selectedDate, endTime);
-
-    if (end <= start) {
-      alert("終了時間は開始時間より後にしてください");
-      return;
-    }
 
     // 追加: アンケート用バリデーション
     let deadline = null;
@@ -363,7 +400,7 @@ export default function Calendar() {
         };
 
         setEvents((prev) =>
-          prev.map((e) => (e.id === editingEventId ? updatedEvent : e))
+          prev.map((e) => (e.id === editingEventId ? updatedEvent : e)),
         );
 
         setOpen(false);
@@ -462,13 +499,11 @@ export default function Calendar() {
 
       setOpen(false);
       await fetchEventsRange(currentRange.start, currentRange.end);
-
     } catch (e) {
       console.error(e);
       alert("イベント作成者が違います。削除に失敗しました。");
     }
   };
-
 
   // ===== 回答送信 ===== ← ★これ追加
   const handleAnswer = async (answer) => {
@@ -480,28 +515,27 @@ export default function Calendar() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ answer }),
-        }
+        },
       );
 
       if (!res1.ok) throw new Error("answer failed");
 
       // 👇 参加者一覧を再取得（リアルタイム反映）
       const res2 = await authFetch(
-        `http://localhost:8080/api/events/${editingEventId}/attendees`
+        `http://localhost:8080/api/events/${editingEventId}/attendees`,
       );
 
       if (!res2.ok) throw new Error("attendees fetch failed");
 
       const users = await res2.json();
 
-      setAttendUsers(users.filter(u => u.status === "ATTEND"));
-      setAbsentUsers(users.filter(u => u.status === "ABSENT"));
+      setAttendUsers(users.filter((u) => u.status === "ATTEND"));
+      setAbsentUsers(users.filter((u) => u.status === "ABSENT"));
 
       alert("回答しました");
 
       // カレンダーも更新
       await fetchEventsRange(currentRange.start, currentRange.end);
-
     } catch (e) {
       console.error(e);
       alert("回答に失敗しました");
@@ -567,42 +601,63 @@ export default function Calendar() {
               </div>
 
               {/* タイトル */}
-              <div>
-                <label>タイトル</label>
-                <input
-                  type="text"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                />
+              <div className="row-item">
+                {" "}
+                {/* ここ変更 */}
+                <span className="row-label">タイトル：</span> {/* ここ変更 */}
+                {isAnswerOnlyMode ? (
+                  <span className="row-value">{title || "未設定"}</span>
+                ) : (
+                  <input
+                    type="text"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                  />
+                )}
               </div>
 
               {/* メモ */}
-              <div>
-                <label>内容メモ</label>
-                <textarea
-                  value={memo}
-                  onChange={(e) => setMemo(e.target.value)}
-                  rows="3"
-                />
+              <div className="row-item">
+                {" "}
+                <span className="row-label">内容メモ：</span>
+                {isAnswerOnlyMode ? (
+                  <span className="row-value memo-text">{memo || "なし"}</span>
+                ) : (
+                  <textarea
+                    value={memo}
+                    onChange={(e) => setMemo(e.target.value)}
+                    rows="3"
+                  />
+                )}
               </div>
 
               {/* 時間 */}
-              <div>
-                <label>開始時間</label>
-                <input
-                  type="time"
-                  value={startTime}
-                  onChange={(e) => setStartTime(e.target.value)}
-                />
+              <div className="row-item">
+                <span className="row-label">開始時間：</span>
+
+                {isAnswerOnlyMode ? (
+                  <span className="row-value">{startTime}</span>
+                ) : (
+                  <input
+                    type="time"
+                    value={startTime}
+                    onChange={(e) => setStartTime(e.target.value)}
+                  />
+                )}
               </div>
 
-              <div>
-                <label>終了時間</label>
-                <input
-                  type="time"
-                  value={endTime}
-                  onChange={(e) => setEndTime(e.target.value)}
-                />
+              <div className="row-item">
+                <span className="row-label">終了時間：</span>
+
+                {isAnswerOnlyMode ? (
+                  <span className="row-value">{endTime}</span>
+                ) : (
+                  <input
+                    type="time"
+                    value={endTime}
+                    onChange={(e) => setEndTime(e.target.value)}
+                  />
+                )}
               </div>
 
               {/* 通知 */}
@@ -611,6 +666,7 @@ export default function Calendar() {
                 <select
                   value={reminder}
                   onChange={(e) => setReminder(e.target.value)}
+                  readOnly={isAnswerOnlyMode}
                 >
                   {reminderOptions.map((opt) => (
                     <option key={opt.value} value={opt.value}>
@@ -626,6 +682,7 @@ export default function Calendar() {
                     type="checkbox"
                     checked={isSurvey}
                     onChange={(e) => setIsSurvey(e.target.checked)}
+                    readOnly={isAnswerOnlyMode}
                   />
                   {editingEventId
                     ? "アンケートを表示する"
@@ -635,13 +692,20 @@ export default function Calendar() {
 
               {isSurvey && (
                 <div style={{ marginTop: "12px" }}>
-                  <div>
-                    <label>アンケート内容</label>
-                    <textarea
-                      value={surveyContent}
-                      onChange={(e) => setSurveyContent(e.target.value)}
-                      rows="3"
-                    />
+                  <div className="row-item">
+                    {" "}
+                    <span className="row-label">アンケート内容：</span>{" "}
+                    {isAnswerOnlyMode ? (
+                      <span className="row-value memo-text">
+                        {surveyContent || "なし"} 
+                      </span>
+                    ) : (
+                      <textarea
+                        value={surveyContent}
+                        onChange={(e) => setSurveyContent(e.target.value)}
+                        rows="3"
+                      />
+                    )}
                   </div>
 
                   <div>
@@ -714,26 +778,30 @@ export default function Calendar() {
                             borderRight: "1px solid #ddd",
                           }}
                         >
-                          <div><strong>参加する</strong></div>
+                          <div>
+                            <strong>参加する</strong>
+                          </div>
 
                           <div style={{ marginTop: "6px" }}>
                             {attendUsers.length > 0
                               ? attendUsers.map((u, i) => (
-                                <div key={i}>{u.email}</div>
-                              ))
+                                  <div key={i}>{u.email}</div>
+                                ))
                               : "なし"}
                           </div>
                         </div>
 
                         {/* 参加しない */}
                         <div style={{ flex: 1 }}>
-                          <div><strong>参加しない</strong></div>
+                          <div>
+                            <strong>参加しない</strong>
+                          </div>
 
                           <div style={{ marginTop: "6px" }}>
                             {absentUsers.length > 0
                               ? absentUsers.map((u, i) => (
-                                <div key={i}>{u.email}</div>
-                              ))
+                                  <div key={i}>{u.email}</div>
+                                ))
                               : "なし"}
                           </div>
                         </div>
@@ -741,31 +809,42 @@ export default function Calendar() {
                     </div>
                   )}
 
-                  <div style={{ marginTop: "10px" }}>
-                    <label>回答締切</label>
-                    <div>
-                      <input
-                        type="date"
-                        value={deadlineDate}
-                        onChange={(e) => setDeadlineDate(e.target.value)}
-                      />
-                      <input
-                        type="time"
-                        value={deadlineTime}
-                        onChange={(e) => setDeadlineTime(e.target.value)}
-                        style={{ marginTop: "8px" }}
-                      />
-                    </div>
+                  <div className="row-item">
+                    {" "}
+                    <span className="row-label">回答締切：</span>{" "}
+                    {isAnswerOnlyMode ? (
+                      <span className="row-value">
+                        {deadlineDate} {deadlineTime}
+                      </span>
+                    ) : (
+                      <div>
+                        <input
+                          type="date"
+                          value={deadlineDate}
+                          onChange={(e) => setDeadlineDate(e.target.value)}
+                        />
+                        <input
+                          type="time"
+                          value={deadlineTime}
+                          onChange={(e) => setDeadlineTime(e.target.value)}
+                          style={{ marginLeft: "8px" }}
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
 
               <div style={{ marginTop: "15px" }}>
                 <button onClick={handleSave}>
-                  {editingEventId ? "更新" : "保存"}
+                  {isAnswerOnlyMode
+                    ? "回答を保存"
+                    : editingEventId
+                      ? "更新"
+                      : "保存"}
                 </button>
 
-                {editingEventId && (
+                {editingEventId && isOwner && (
                   <button
                     onClick={handleDelete}
                     style={{

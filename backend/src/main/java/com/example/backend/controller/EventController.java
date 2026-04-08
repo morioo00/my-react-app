@@ -8,7 +8,9 @@ import com.example.backend.entity.User;
 import com.example.backend.repository.EventRepository;
 import com.example.backend.repository.SurveyAnswerRepository;
 import com.example.backend.repository.UserRepository;
-import com.example.backend.service.EventService;
+import com.example.calendar.service.EventService;
+import org.springframework.transaction.annotation.Transactional;
+import java.util.Objects;
 
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
@@ -112,34 +114,20 @@ public class EventController {
     // イベント削除
     // =========================
     @DeleteMapping("/{id}")
+    @Transactional
     public void deleteEvent(@PathVariable Long id, Authentication auth) {
+
+        if (id == null) {
+            throw new IllegalArgumentException("id is null");
+        }
 
         Event event = repo.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
                         "Event not found"));
 
-        Jwt jwt = (Jwt) auth.getPrincipal();
-        String sub = jwt.getSubject();
-
-        User currentUser = userRepository.findBySupabaseUserId(sub)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.UNAUTHORIZED,
-                        "ログインユーザーが見つかりません"));
-
-        if (event.getAuthor() == null) {
-            throw new ResponseStatusException(
-                    HttpStatus.INTERNAL_SERVER_ERROR,
-                    "イベントに作成者が設定されていません");
-        }
-
-        if (!event.getAuthor().getId().equals(currentUser.getId())) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "自分が作成したイベントのみ削除できます");
-        }
-
-        repo.delete(event);
+        surveyAnswerRepository.deleteByEventId(id);
+        repo.delete(Objects.requireNonNull(event)); // ここ変更
     }
 
     // =========================
@@ -158,6 +146,10 @@ public class EventController {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.UNAUTHORIZED,
                         "ログインユーザーが見つかりません"));
+
+        if (eventId == null) { // ここ追加
+            throw new IllegalArgumentException("eventId is null");
+        }
 
         Event event = repo.findById(eventId)
                 .orElseThrow(() -> new ResponseStatusException(
@@ -181,39 +173,45 @@ public class EventController {
     // 参加者一覧
     // =========================
     @GetMapping("/{eventId}/attendees")
-public List<AttendeeDto> getAttendees(@PathVariable Long eventId) {
+    public List<AttendeeDto> getAttendees(@PathVariable Long eventId) {
 
-    // まずイベント取得
-    Event event = repo.findById(eventId)
-            .orElseThrow(() -> new ResponseStatusException(
-                    HttpStatus.NOT_FOUND,
-                    "Event not found"));
+        if (eventId == null) {
+            throw new IllegalArgumentException("eventId is null");
+        }
 
-    // 新規作成イベントの場合は回答者一覧を返さない
-    if (event.getIsSurvey() == null || !event.getIsSurvey()) {
-        return List.of(); // 空リストを返す
+        // まずイベント取得
+        Event event = repo.findById(eventId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Event not found"));
+
+        // 新規作成イベントの場合は回答者一覧を返さない
+        if (event.getIsSurvey() == null || !event.getIsSurvey()) {
+            return List.of(); // 空リストを返す
+        }
+
+        List<User> users = userRepository.findAll();
+
+        return users.stream().map(user -> {
+
+            var answer = surveyAnswerRepository
+                    .findByEventIdAndUserId(eventId, user.getId())
+                    .orElse(null);
+
+            return new AttendeeDto(
+                    user.getEmail(),
+                    user.getEmail(), // ここ変更（nameの代わり）
+                    null, // ここ変更（avatarの代わり）
+                    answer != null ? convertStatus(answer.getAnswer()) : "NO_RESPONSE",
+                    answer != null ? answer.getAnswer() : null);
+        }).toList();
     }
 
-    List<User> users = userRepository.findAll();
-
-    return users.stream().map(user -> {
-
-        var answer = surveyAnswerRepository
-                .findByEventIdAndUserId(eventId, user.getId())
-                .orElse(null);
-
-        return new AttendeeDto(
-                user.getEmail(),
-                user.getName(),
-                user.getAvatarUrl(),
-                answer != null ? convertStatus(answer.getAnswer()) : "NO_RESPONSE",
-                answer != null ? answer.getAnswer() : null);
-    }).toList();
-}
-
     private String convertStatus(String answer) {
-        if ("参加する".equals(answer)) return "ATTEND";
-        if ("参加しない".equals(answer)) return "ABSENT";
+        if ("参加する".equals(answer))
+            return "ATTEND";
+        if ("参加しない".equals(answer))
+            return "ABSENT";
         return "UNKNOWN";
     }
 }

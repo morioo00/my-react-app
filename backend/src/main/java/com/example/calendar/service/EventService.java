@@ -1,4 +1,4 @@
-package com.example.backend.service;
+package com.example.calendar.service;
 
 import com.example.backend.dto.EventResponseDto;
 import com.example.backend.dto.UserAnswerDto;
@@ -31,8 +31,7 @@ public class EventService {
     // =========================
     public List<EventResponseDto> getEvents(LocalDateTime from, LocalDateTime to, String loginUserEmail) {
 
-        List<Event> events =
-                eventRepository.findByStartAtLessThanAndEndAtGreaterThan(to, from);
+        List<Event> events = eventRepository.findByStartAtLessThanAndEndAtGreaterThan(to, from);
 
         return events.stream().map(event -> {
 
@@ -55,8 +54,7 @@ public class EventService {
                     attendCount,
                     absentCount,
                     myAnswer,
-                    users
-            );
+                    users);
 
         }).toList();
     }
@@ -96,8 +94,7 @@ public class EventService {
                 0,
                 0,
                 null,
-                List.of()
-        );
+                List.of());
     }
 
     // =========================
@@ -105,19 +102,14 @@ public class EventService {
     // =========================
     public EventResponseDto updateEvent(Long id, Event updatedEvent, Authentication auth) {
 
+        if (id == null) { // ここ追加
+            throw new IllegalArgumentException("id is null");
+        }
+
         Event event = eventRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Event not found"));
 
-        Jwt jwt = (Jwt) auth.getPrincipal();
-        String sub = jwt.getSubject();
-
-        User currentUser = userRepository.findBySupabaseUserId(sub)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        if (!event.getAuthor().getId().equals(currentUser.getId())) {
-            throw new RuntimeException("権限なし");
-        }
-
+        // ===== 更新処理 =====
         event.setTitle(updatedEvent.getTitle());
         event.setMemo(updatedEvent.getMemo());
         event.setStartAt(updatedEvent.getStartAt());
@@ -135,7 +127,7 @@ public class EventService {
                 saved.getMemo(),
                 saved.getStartAt(),
                 saved.getEndAt(),
-                saved.getAuthor().getEmail(),
+                saved.getAuthor() != null ? saved.getAuthor().getEmail() : null,
                 saved.getIsSurvey(),
                 saved.getSurveyContent(),
                 saved.getSurveyOptions(),
@@ -143,7 +135,6 @@ public class EventService {
                 0,
                 0,
                 null,
-                List.of()
-        );
+                List.of());
     }
 }

@@ -1,7 +1,5 @@
 package com.example.backend.dto;
 
-import java.util.List;
-
 public class UserAnswerDto {
 
     public String email;

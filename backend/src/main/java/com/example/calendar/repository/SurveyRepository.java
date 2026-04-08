@@ -1,9 +1,8 @@
-package com.example.backend.repository;
+package com.example.calendar.repository;
 
 import com.example.backend.entity.SurveyAnswer;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
-import java.util.List;
 import java.util.Optional;
 
 public interface SurveyRepository extends JpaRepository<SurveyAnswer, Long> {
@@ -21,5 +20,6 @@ public interface SurveyRepository extends JpaRepository<SurveyAnswer, Long> {
     java.util.List<SurveyAnswer> findByEventId(Long eventId);
 
     Long countByEventIdAndAnswer(Long eventId, String answer);
+
     Optional<SurveyAnswer> findByEventIdAndUserId(Long eventId, Long userId);
 }

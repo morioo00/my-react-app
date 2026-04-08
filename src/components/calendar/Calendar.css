@@ -253,3 +253,31 @@ html, body, #root {
   font-weight: 600;
   white-space: nowrap;
 }
+
+.readonly-value {
+  margin-top: 4px;
+  color: #111827;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* 横並び用 */
+.row-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.row-label {
+  font-weight: 600;
+  min-width: 90px;
+}
+
+.row-value {
+  color: #222;
+}
+
+.memo-text {
+  white-space: pre-wrap; /* ←改行をそのまま表示 */
+}

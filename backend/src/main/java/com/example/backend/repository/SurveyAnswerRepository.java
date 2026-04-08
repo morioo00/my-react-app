@@ -9,8 +9,10 @@ import java.util.Optional;
 public interface SurveyAnswerRepository extends JpaRepository<SurveyAnswer, Long> {
 
     long countByEventIdAndAnswer(Long eventId, String answer);
-    
+
     Optional<SurveyAnswer> findByEventIdAndUserId(Long eventId, Long userId);
 
     List<SurveyAnswer> findByEventId(Long eventId);
+
+    void deleteByEventId(Long eventId);
 }
