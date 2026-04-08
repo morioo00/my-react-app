@@ -1,7 +1,5 @@
 package com.example.backend.dto;
 
-import java.util.List;
-
 public class UserAnswerDto {
 
     public String email;
@@ -11,5 +9,4 @@ public class UserAnswerDto {
         this.email = email;
         this.answer = answer;
     }
-    private List<AttendeeDto> users;
 }

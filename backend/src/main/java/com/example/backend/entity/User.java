@@ -14,10 +14,10 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "supabase_user_id", nullable = false, unique = true) // ここ変更
+    @Column(name = "supabase_user_id", nullable = false, unique = true)
     private String supabaseUserId;
 
-    @Column(nullable = false, unique = true) // ここ変更
+    @Column(nullable = false, unique = true)
     private String email;
 
     @OneToMany(mappedBy = "author")
@@ -26,7 +26,7 @@ public class User {
     public User() {
     } // JPA用
 
-    public User(String supabaseUserId, String email) { // ここ変更
+    public User(String supabaseUserId, String email) {
         this.supabaseUserId = supabaseUserId;
         this.email = email;
     }
