@@ -281,3 +281,10 @@ html, body, #root {
 .memo-text {
   white-space: pre-wrap; /* ←改行をそのまま表示 */
 }
+
+.deadline-input-group {  /* 投稿時の回答締め切りの日付と時間幅合わせ */
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1; 
+}
