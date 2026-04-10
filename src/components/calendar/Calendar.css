@@ -263,7 +263,7 @@ html, body, #root {
 
 /* 横並び用 */
 .row-item {
-  display: flex;
+  
   align-items: center;
   gap: 8px;
   margin-top: 10px;
@@ -273,11 +273,20 @@ html, body, #root {
   font-weight: 600;
   min-width: 90px;
 }
-
-.row-value {
-  color: #222;
-}
-
+.text-multiline,
+.row-value,
 .memo-text {
-  white-space: pre-wrap; /* ←改行をそのまま表示 */
+  display: block;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.text-multiline {
+  width: 100%;
+  box-sizing: border-box;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  resize: vertical;
+  line-height: 1.5;
 }
