@@ -288,3 +288,11 @@ html, body, #root {
   gap: 6px;
   flex: 1; 
 }
+
+.answer-user {  /* 回答者名が長いときに...となるように */
+  max-width: 230px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
