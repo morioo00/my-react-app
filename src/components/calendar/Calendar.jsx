@@ -9,6 +9,7 @@ import apiSearcher from "./search/searchers/apiSearcher";
 import authFetch from "../auth/authFetch";
 import { getToken } from "../auth/tokenStorage";
 import { isHoliday } from "./holidayUtils"; //祝日指定
+import CalendarEventContent from "./CalendarEventContent";
 
 import { supabase } from "../../lib/supabaseClient";
 
@@ -261,8 +262,8 @@ export default function Calendar() {
   // ===== 保存 =====
   const handleSave = async () => {
     console.log("save mode:", editingEventId);
-      const start = toDate(selectedDate, startTime);
-      const end = toDate(selectedDate, endTime);
+    const start = toDate(selectedDate, startTime);
+    const end = toDate(selectedDate, endTime);
 
     //  他人のイベントは回答だけ保存する
     if (isAnswerOnlyMode && editingEventId) {
@@ -697,7 +698,7 @@ export default function Calendar() {
                     <span className="row-label">アンケート内容：</span>{" "}
                     {isAnswerOnlyMode ? (
                       <span className="row-value memo-text">
-                        {surveyContent || "なし"} 
+                        {surveyContent || "なし"}
                       </span>
                     ) : (
                       <textarea
@@ -817,7 +818,7 @@ export default function Calendar() {
                         {deadlineDate} {deadlineTime}
                       </span>
                     ) : (
-                      <div>
+                      <div className="deadline-input-group">
                         <input
                           type="date"
                           value={deadlineDate}
@@ -827,7 +828,6 @@ export default function Calendar() {
                           type="time"
                           value={deadlineTime}
                           onChange={(e) => setDeadlineTime(e.target.value)}
-                          style={{ marginLeft: "8px" }}
                         />
                       </div>
                     )}
@@ -900,19 +900,10 @@ export default function Calendar() {
 
             return classes;
           }}
-          eventContent={(arg) => {
-            const creator = arg.event.extendedProps.creator;
-            return (
-              <div>
-                {creator && (
-                  <div style={{ fontSize: "10px", fontWeight: "bold" }}>
-                    {creator}
-                  </div>
-                )}
-                <div>{arg.event.title}</div>
-              </div>
-            );
-          }}
+
+          // アンケート付き、募集中、期限切れアイコン表示
+          eventContent={(arg) => <CalendarEventContent event={arg.event} />}
+          
         />
       </div>
     </div>
