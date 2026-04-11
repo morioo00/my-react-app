@@ -719,19 +719,18 @@ export default function Calendar() {
                     <div>
                       <div>
                         <div style={{ display: "block" }}>
-                          {/* 参加する */}
                           <input
                             type="checkbox"
-                            name="answer"
                             checked={selectedAnswer === "参加する"}
                             disabled={!isSurvey}
                             onChange={() => setSelectedAnswer("参加する")}
                           />
                           <span>参加する</span>
+                        </div>
 
+                        <div style={{ display: "block", marginTop: "4px" }}>
                           <input
                             type="checkbox"
-                            name="answer"
                             checked={selectedAnswer === "参加しない"}
                             disabled={!isSurvey}
                             onChange={() => setSelectedAnswer("参加しない")}
@@ -893,7 +892,7 @@ export default function Calendar() {
 
           // アンケート付き、募集中、期限切れアイコン表示
           eventContent={(arg) => <CalendarEventContent event={arg.event} />}
-          
+
         />
       </div>
     </div>
