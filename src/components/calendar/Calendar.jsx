@@ -109,6 +109,8 @@ export default function Calendar() {
   const isOwner = //  自分のイベントかどうか判定
     !!editingEventId && !!currentUserEmail && creator === currentUserEmail;
   const isAnswerOnlyMode = !!editingEventId && !isOwner; // : 他人のイベントなら回答専用モード
+  const canEditSurvey = !editingEventId || creator === currentUserEmail;
+  const showSurveyToggle = !editingEventId || isOwner || isSurvey;
 
   // ===== DBからイベント取得（初期表示用） =====
   const pad = (n) => String(n).padStart(2, "0");
@@ -225,6 +227,7 @@ export default function Calendar() {
     setIsSurvey(event.extendedProps.isSurvey || false);
 
     setSurveyContent(event.extendedProps.surveyContent || "");
+    setSelectedAnswer(event.extendedProps.myAnswer || null);
 
     const options = event.extendedProps.surveyOptions || [];
     setAllowAttend(options.includes("参加する"));
@@ -677,19 +680,21 @@ export default function Calendar() {
                 </select>
               </div>
 
-              <div>
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={isSurvey}
-                    onChange={(e) => setIsSurvey(e.target.checked)}
-                    readOnly={isAnswerOnlyMode}
-                  />
-                  {editingEventId
-                    ? "アンケートを表示する"
-                    : "アンケートを作成する"}
-                </label>
-              </div>
+              {showSurveyToggle && (
+                <div>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={isSurvey}
+                      onChange={(e) => setIsSurvey(e.target.checked)}
+                      disabled={!canEditSurvey}
+                    />
+                    {editingEventId
+                      ? "アンケートを表示する"
+                      : "アンケートを作成する"}
+                  </label>
+                </div>
+              )}
 
               {isSurvey && (
                 <div style={{ marginTop: "12px" }}>
@@ -714,37 +719,21 @@ export default function Calendar() {
                     <div>
                       <div>
                         <div style={{ display: "block" }}>
-                          {/* 参加する */}
                           <input
                             type="checkbox"
-                            checked={allowAttend}
-                            onChange={(e) => {
-                              const checked = e.target.checked;
-
-                              if (!checked) return;
-
-                              setAllowAttend(true);
-                              setAllowAbsent(false);
-                              setSelectedAnswer("参加する"); // ←重要🔥
-                            }}
+                            checked={selectedAnswer === "参加する"}
+                            disabled={!isSurvey}
+                            onChange={() => setSelectedAnswer("参加する")}
                           />
                           <span>参加する</span>
                         </div>
 
                         <div style={{ display: "block", marginTop: "4px" }}>
-                          {/* 参加しない */}
                           <input
                             type="checkbox"
-                            checked={allowAbsent}
-                            onChange={(e) => {
-                              const checked = e.target.checked;
-
-                              if (!checked) return;
-
-                              setAllowAttend(false);
-                              setAllowAbsent(true);
-                              setSelectedAnswer("参加しない"); // ←重要🔥
-                            }}
+                            checked={selectedAnswer === "参加しない"}
+                            disabled={!isSurvey}
+                            onChange={() => setSelectedAnswer("参加しない")}
                           />
                           <span>参加しない</span>
                         </div>
@@ -786,8 +775,8 @@ export default function Calendar() {
                           <div style={{ marginTop: "6px" }}>
                             {attendUsers.length > 0
                               ? attendUsers.map((u, i) => (
-                                  <div key={i}>{u.email}</div>
-                                ))
+                                <div key={i}>{u.email}</div>
+                              ))
                               : "なし"}
                           </div>
                         </div>
@@ -801,8 +790,8 @@ export default function Calendar() {
                           <div style={{ marginTop: "6px" }}>
                             {absentUsers.length > 0
                               ? absentUsers.map((u, i) => (
-                                  <div key={i}>{u.email}</div>
-                                ))
+                                <div key={i}>{u.email}</div>
+                              ))
                               : "なし"}
                           </div>
                         </div>
@@ -903,7 +892,7 @@ export default function Calendar() {
 
           // アンケート付き、募集中、期限切れアイコン表示
           eventContent={(arg) => <CalendarEventContent event={arg.event} />}
-          
+
         />
       </div>
     </div>
