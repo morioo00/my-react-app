@@ -109,6 +109,7 @@ export default function Calendar() {
   const isOwner = //  自分のイベントかどうか判定
     !!editingEventId && !!currentUserEmail && creator === currentUserEmail;
   const isAnswerOnlyMode = !!editingEventId && !isOwner; // : 他人のイベントなら回答専用モード
+  const canAnswerSurvey = isAnswerOnlyMode && isSurvey;
   const canEditSurvey = !editingEventId || creator === currentUserEmail;
   const showSurveyToggle = !editingEventId || isOwner || isSurvey;
 
@@ -268,8 +269,8 @@ export default function Calendar() {
     const start = toDate(selectedDate, startTime);
     const end = toDate(selectedDate, endTime);
 
-    //  他人のイベントは回答だけ保存する
-    if (isAnswerOnlyMode && editingEventId) {
+    // 他人のイベント かつ アンケートあり のときだけ回答保存する
+    if (canAnswerSurvey && editingEventId) {
       if (!selectedAnswer) {
         alert("参加する / 参加しない のどちらかを選んでください。");
         return;
@@ -595,7 +596,11 @@ export default function Calendar() {
           <div className="modal-overlay" onClick={() => setOpen(false)}>
             <div className="modal-box" onClick={(e) => e.stopPropagation()}>
               <h3>
-                {editingEventId ? "予定編集" : `${selectedDate} の予定追加`}
+                {editingEventId
+                  ? isOwner
+                    ? `${selectedDate} の予定編集`
+                    : `${selectedDate} の予定確認`
+                  : `${selectedDate} の予定追加`}
               </h3>
 
               {/* 作成者 */}
@@ -775,8 +780,10 @@ export default function Calendar() {
                           <div style={{ marginTop: "6px" }}>
                             {attendUsers.length > 0
                               ? attendUsers.map((u, i) => (
-                                <div key={i}>{u.email}</div>
-                              ))
+                                  <div key={i} className="answer-user">
+                                  {u.email}
+                                  </div>
+                                ))
                               : "なし"}
                           </div>
                         </div>
@@ -790,8 +797,10 @@ export default function Calendar() {
                           <div style={{ marginTop: "6px" }}>
                             {absentUsers.length > 0
                               ? absentUsers.map((u, i) => (
-                                <div key={i}>{u.email}</div>
-                              ))
+                                  <div key={i} className="answer-user">
+                                  {u.email}
+                                  </div>
+                                ))
                               : "なし"}
                           </div>
                         </div>
@@ -825,13 +834,15 @@ export default function Calendar() {
               )}
 
               <div style={{ marginTop: "15px" }}>
-                <button onClick={handleSave}>
-                  {isAnswerOnlyMode
-                    ? "回答を保存"
-                    : editingEventId
-                      ? "更新"
-                      : "保存"}
-                </button>
+                {(isOwner || !editingEventId || canAnswerSurvey) && (
+                  <button onClick={handleSave}>
+                    {canAnswerSurvey
+                      ? "回答を保存"
+                      : editingEventId
+                        ? "更新"
+                        : "保存"}
+                  </button>
+                )}
 
                 {editingEventId && isOwner && (
                   <button
