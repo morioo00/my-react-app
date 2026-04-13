@@ -198,6 +198,8 @@ export default function Calendar() {
     setEndTime("10:00");
     setReminder("none");
 
+    setSelectedAnswer(null);
+
     // 追加: 初期化
     setIsSurvey(false);
     setSurveyContent("");
@@ -325,8 +327,12 @@ export default function Calendar() {
         return;
       }
 
-      if (allowAttend) surveyOptions.push("参加する");
-      if (allowAbsent) surveyOptions.push("参加しない");
+      if (selectedAnswer === "参加する") {
+        surveyOptions.push("参加する");
+      }
+      if (selectedAnswer === "参加しない") {
+        surveyOptions.push("参加しない");
+      }
 
       if (surveyOptions.length === 0) {
         alert("参加する / 参加しない の少なくともどちらかを選んでください");
@@ -780,10 +786,10 @@ export default function Calendar() {
                           <div style={{ marginTop: "6px" }}>
                             {attendUsers.length > 0
                               ? attendUsers.map((u, i) => (
-                                  <div key={i} className="answer-user">
+                                <div key={i} className="answer-user">
                                   {u.email}
-                                  </div>
-                                ))
+                                </div>
+                              ))
                               : "なし"}
                           </div>
                         </div>
@@ -797,10 +803,10 @@ export default function Calendar() {
                           <div style={{ marginTop: "6px" }}>
                             {absentUsers.length > 0
                               ? absentUsers.map((u, i) => (
-                                  <div key={i} className="answer-user">
+                                <div key={i} className="answer-user">
                                   {u.email}
-                                  </div>
-                                ))
+                                </div>
+                              ))
                               : "なし"}
                           </div>
                         </div>
