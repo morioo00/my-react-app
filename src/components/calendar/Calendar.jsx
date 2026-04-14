@@ -271,6 +271,11 @@ export default function Calendar() {
     const start = toDate(selectedDate, startTime);
     const end = toDate(selectedDate, endTime);
 
+    if (start >= end) {
+      alert("終了時間は開始時間より後にしてください");
+      return;
+    }
+
     // 他人のイベント かつ アンケートあり のときだけ回答保存する
     if (canAnswerSurvey && editingEventId) {
       if (!selectedAnswer) {
@@ -670,6 +675,7 @@ export default function Calendar() {
                   <input
                     type="time"
                     value={endTime}
+                    min={startTime}
                     onChange={(e) => setEndTime(e.target.value)}
                   />
                 )}
