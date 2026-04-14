@@ -26,6 +26,17 @@ public class EventService {
     @Autowired
     private UserRepository userRepository;
 
+    private void validateEventTime(LocalDateTime startAt, LocalDateTime endAt) {
+
+    if (startAt == null || endAt == null) {
+        throw new IllegalArgumentException("開始時間と終了時間は必須です");
+    }
+
+    if (!endAt.isAfter(startAt)) {
+        throw new IllegalArgumentException("終了時間は開始時間より後にしてください");
+    }
+}
+
     // =========================
     // ① イベント一覧
     // =========================
@@ -63,6 +74,8 @@ public class EventService {
     // ② 作成
     // =========================
     public EventResponseDto createEvent(Event event, Authentication auth) {
+
+        validateEventTime(event.getStartAt(), event.getEndAt()); 
 
         Jwt jwt = (Jwt) auth.getPrincipal();
         String sub = jwt.getSubject();
@@ -105,6 +118,14 @@ public class EventService {
         if (id == null) { // ここ追加
             throw new IllegalArgumentException("id is null");
         }
+
+            validateEventTime(updatedEvent.getStartAt(), updatedEvent.getEndAt()); 
+    
+            Jwt jwt = (Jwt) auth.getPrincipal();
+            String sub = jwt.getSubject();
+    
+            User user = userRepository.findBySupabaseUserId(sub)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
 
         Event event = eventRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Event not found"));

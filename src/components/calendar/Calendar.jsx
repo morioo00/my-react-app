@@ -10,6 +10,7 @@ import authFetch from "../auth/authFetch";
 import { getToken } from "../auth/tokenStorage";
 import { isHoliday } from "./holidayUtils"; //祝日指定
 import CalendarEventContent from "./CalendarEventContent";
+import { isDeadlinePassed } from "./deadlineUtils";  //締め切りを打ち切り
 
 import { supabase } from "../../lib/supabaseClient";
 
@@ -112,6 +113,12 @@ export default function Calendar() {
   const canAnswerSurvey = isAnswerOnlyMode && isSurvey;
   const canEditSurvey = !editingEventId || creator === currentUserEmail;
   const showSurveyToggle = !editingEventId || isOwner || isSurvey;
+
+const deadlinePassed = isDeadlinePassed(deadlineDate, deadlineTime);  //締め切り時
+const canShowSaveButton =  //回答を保存ボタンを
+  isOwner ||  //自分の予定なら表示してよい
+  !editingEventId ||  //新規作成なら表示してよい
+  (canAnswerSurvey && !deadlinePassed);  //他人のアンケート回答モード かつ 締め切り前なら表示してよい
 
   // ===== DBからイベント取得（初期表示用） =====
   const pad = (n) => String(n).padStart(2, "0");
@@ -230,7 +237,7 @@ export default function Calendar() {
     setIsSurvey(event.extendedProps.isSurvey || false);
 
     setSurveyContent(event.extendedProps.surveyContent || "");
-    setSelectedAnswer(event.extendedProps.myAnswer || null);
+    setSelectedAnswer(null);
 
     const options = event.extendedProps.surveyOptions || [];
     setAllowAttend(options.includes("参加する"));
@@ -257,6 +264,10 @@ export default function Calendar() {
 
       setAttendUsers(users.filter((u) => u.status === "ATTEND"));
       setAbsentUsers(users.filter((u) => u.status === "ABSENT"));
+
+    const me = users.find((u) => u.email === currentUserEmail);
+    setSelectedAnswer(me?.answer || null);
+
     } catch (e) {
       console.error(e);
       alert("取得失敗");
@@ -270,6 +281,11 @@ export default function Calendar() {
     console.log("save mode:", editingEventId);
     const start = toDate(selectedDate, startTime);
     const end = toDate(selectedDate, endTime);
+
+    if (start >= end) {
+      alert("終了時間は開始時間より後にしてください");
+      return;
+    }
 
     // 他人のイベント かつ アンケートあり のときだけ回答保存する
     if (canAnswerSurvey && editingEventId) {
@@ -670,6 +686,7 @@ export default function Calendar() {
                   <input
                     type="time"
                     value={endTime}
+                    min={startTime}
                     onChange={(e) => setEndTime(e.target.value)}
                   />
                 )}
@@ -733,7 +750,7 @@ export default function Calendar() {
                           <input
                             type="checkbox"
                             checked={selectedAnswer === "参加する"}
-                            disabled={!isSurvey}
+                            disabled={!isSurvey || deadlinePassed}  // disabled={!isSurvey}
                             onChange={() => setSelectedAnswer("参加する")}
                           />
                           <span>参加する</span>
@@ -743,7 +760,7 @@ export default function Calendar() {
                           <input
                             type="checkbox"
                             checked={selectedAnswer === "参加しない"}
-                            disabled={!isSurvey}
+                            disabled={!isSurvey || deadlinePassed}  //disabled={!isSurvey}
                             onChange={() => setSelectedAnswer("参加しない")}
                           />
                           <span>参加しない</span>
@@ -840,7 +857,7 @@ export default function Calendar() {
               )}
 
               <div style={{ marginTop: "15px" }}>
-                {(isOwner || !editingEventId || canAnswerSurvey) && (
+                {canShowSaveButton && (
                   <button onClick={handleSave}>
                     {canAnswerSurvey
                       ? "回答を保存"
